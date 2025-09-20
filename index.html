@@ -10,7 +10,7 @@
 <meta property="og:url" content="https://faworee.github.io/SoundSpaceCustoms/">
 <meta property="og:type" content="website">
 
-<title>Sound Space Custom Maps - Enhanced</title>
+<title>Sound Space Custom Maps - Enhanced with Star Ratings</title>
 <style>
 body {
     background-color: #0f0f0f;
@@ -37,6 +37,7 @@ body {
     width: 100%;
     max-width: 1200px;
     margin: 0 auto 30px;
+    position: relative;
 }
 
 .header-button {
@@ -68,12 +69,42 @@ body {
     box-shadow: 0 6px 15px rgba(26, 188, 156, 0.5);
 }
 
+.performance-toggle {
+    position: middle;
+    right: 0;
+    top: 0px;
+    background: rgba(79, 172, 254, 0.2);
+    border: 1px solid rgba(79, 172, 254, 0.4);
+    color: #4facfe;
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.3s ease;
+}
+
+.performance-toggle:hover {
+    background: rgba(79, 172, 254, 0.3);
+    transform: scale(1.05);
+}
+
+.performance-toggle.active {
+    background: linear-gradient(90deg, #4facfe, #00f2fe);
+    color: white;
+}
+
 h1 {
     font-size: 3em;
     background: linear-gradient(90deg, #4facfe, #00f2fe);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 30px;
+}
+
+.low-quality h1 {
+    background: none;
+    color: #4facfe;
+    -webkit-text-fill-color: initial;
 }
 
 #search-container {
@@ -99,9 +130,20 @@ h1 {
     transition: box-shadow 0.3s;
 }
 
+.low-quality #search-bar {
+    box-shadow: none;
+    border: 1px solid #444;
+    transition: none;
+}
+
 #search-bar:focus {
     outline: none;
     box-shadow: inset 0 0 8px rgba(0, 255, 255, 0.3), 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+.low-quality #search-bar:focus {
+    box-shadow: none;
+    border-color: #4facfe;
 }
 
 .filter-dropdown {
@@ -120,20 +162,48 @@ h1 {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
 }
 
+.low-quality #filter-toggle, .low-quality #sort-toggle {
+    transition: none;
+    box-shadow: none;
+    border: 1px solid #444;
+}
+
 #filter-toggle {
     background: linear-gradient(90deg, #17a2b8, #138496);
 }
+
+.low-quality #filter-toggle {
+    background: #17a2b8;
+}
+
 #filter-toggle:hover {
     transform: scale(1.05);
     box-shadow: 0 0 12px #138496;
 }
 
+.low-quality #filter-toggle:hover {
+    transform: none;
+    box-shadow: none;
+    background: #138496;
+}
+
 #sort-toggle {
     background: linear-gradient(90deg, #28a745, #218838);
 }
+
+.low-quality #sort-toggle {
+    background: #28a745;
+}
+
 #sort-toggle:hover {
     transform: scale(1.05);
     box-shadow: 0 0 12px #218838;
+}
+
+.low-quality #sort-toggle:hover {
+    transform: none;
+    box-shadow: none;
+    background: #218838;
 }
 
 #filter-menu {
@@ -205,28 +275,6 @@ h1 {
     min-width: 120px;
 }
 
-.duration-filter-section, .notes-filter-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.duration-filter-section h3, .notes-filter-section h3 {
-    color: #4facfe;
-    font-size: 1.1em;
-    margin-bottom: 10px;
-}
-
-.range-filter-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    text-align: center;
-}
-
 .textbox-group {
     display: flex;
     align-items: center;
@@ -251,6 +299,10 @@ h1 {
     box-shadow: 0 0 5px rgba(79, 172, 254, 0.3);
 }
 
+.low-quality .filter-textbox:focus {
+    box-shadow: none;
+}
+
 .textbox-group span {
     color: #ccc;
     font-weight: bold;
@@ -268,15 +320,28 @@ h1 {
     flex-shrink: 0;
 }
 
+.low-quality .filter-button {
+    transition: none;
+}
+
 .filter-button:hover {
     background-color: #444;
     box-shadow: 0 0 8px rgba(255,255,255,0.2);
+}
+
+.low-quality .filter-button:hover {
+    box-shadow: none;
 }
 
 .filter-button.active {
     background: linear-gradient(90deg, #28a745, #218838);
     color: white;
     box-shadow: 0 0 8px #218838;
+}
+
+.low-quality .filter-button.active {
+    background: #28a745;
+    box-shadow: none;
 }
 
 .bottom-filters-grid {
@@ -330,6 +395,10 @@ h1 {
     transition: all 0.2s;
 }
 
+.low-quality .clear-filters, .low-quality .apply-filters {
+    transition: none;
+}
+
 .clear-filters {
     background-color: #dc3545;
     color: white;
@@ -358,6 +427,10 @@ h1 {
     align-items: stretch;
 }
 
+.low-quality #map-list {
+    gap: 15px;
+}
+
 .map-card {
     position: relative;
     border-radius: 15px;
@@ -376,11 +449,69 @@ h1 {
     z-index: 1;
 }
 
+.low-quality .map-card {
+    box-shadow: none;
+    transition: none;
+    background: #222;
+    border-radius: 10px;
+    min-height: 180px;
+    padding: 15px;
+}
+
 .map-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.8);
     border: 2px solid #00f2fe;
     background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+}
+
+.low-quality .map-card:hover {
+    transform: none;
+    box-shadow: none;
+    background: #333;
+    border-color: #4facfe;
+}
+
+/* Star Rating Box */
+.star-rating-box {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #ffd700;
+    border-radius: 8px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 3;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: #ffd700;
+    min-width: 50px;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+.low-quality .star-rating-box {
+    box-shadow: none;
+    border-radius: 5px;
+}
+
+.star-rating-box.calculating {
+    color: #ccc;
+    border-color: #666;
+}
+
+.star-rating-box.error {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+.star-icon {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
 }
 
 .new-tag {
@@ -398,6 +529,13 @@ h1 {
     animation: gradientShift 3s ease-in-out infinite, pulse 2s ease-in-out infinite;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.low-quality .new-tag {
+    background: #ff6b6b;
+    animation: none;
+    box-shadow: none;
+    text-shadow: none;
 }
 
 @keyframes gradientShift {
@@ -425,6 +563,7 @@ h1 {
     align-items: center;
     text-align: center;
     gap: 8px;
+    margin-top: 25px;
 }
 
 .map-artist {
@@ -446,10 +585,18 @@ h1 {
     transition: color 0.2s;
 }
 
+.low-quality .map-name {
+    transition: none;
+}
+
 .map-name a {
     color: #4facfe;
     text-decoration: none;
     transition: color 0.2s;
+}
+
+.low-quality .map-name a {
+    transition: none;
 }
 
 .map-name a:hover {
@@ -461,25 +608,49 @@ h1 {
     color: #ccc;
 }
 
-.map-info {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+.map-stats {
+    display: flex;
+    justify-content: center;
     gap: 10px;
-    width: 100%;
     margin: 8px 0;
 }
 
-.map-duration, .map-notes {
-    background: rgba(79, 172, 254, 0.1);
-    padding: 8px 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(79, 172, 254, 0.3);
+.map-stat-item {
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    border: none;
+    border-radius: 25px; 
+    padding: 6px 12px; 
+    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
     display: flex;
-    justify-content: center;
+    flex-direction: row;
     align-items: center;
-    text-align: center;
-    font-size: 0.75em;
-    white-space: nowrap;
+    justify-content: center;
+    gap: 5px;
+    font-size: 0.85em;
+    color: white;
+}
+
+.low-quality .map-stat-item {
+    background: #1a1a1a;
+    box-shadow: none;
+    border-radius: 15px;
+    border: 1px solid rgba(79, 172, 254, 0.3);
+}
+
+.map-stat-item img {
+    height: 16px;
+    width: auto;
+    filter: drop-shadow(0 0 2px #fff);
+    vertical-align: middle;
+}
+
+.low-quality .map-stat-item img {
+    filter: none;
+}
+
+.map-stat-item span {
+    font-size: 1em;
+    color: #00f2fe;
 }
 
 .map-footer {
@@ -489,24 +660,6 @@ h1 {
     align-items: flex-start;
     gap: 12px;
     margin-top: 15px;
-}
-
-.map-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    justify-content: flex-start;
-    flex-basis: 0;
-    flex-grow: 1;
-    min-width: 0;
-}
-
-.map-tags span {
-    background-color: #333;
-    border-radius: 12px;
-    padding: 3px 8px;
-    font-size: 0.75em;
-    white-space: nowrap;
 }
 
 .action-buttons {
@@ -528,9 +681,18 @@ h1 {
     background-color: #007bff;
 }
 
+.low-quality .copy-btn {
+    transition: none;
+    border-radius: 15px;
+}
+
 .copy-btn:hover {
     background-color: #0056b3;
     transform: scale(1.05);
+}
+
+.low-quality .copy-btn:hover {
+    transform: none;
 }
 
 .copy-btn.copied {
@@ -554,9 +716,18 @@ h1 {
     background-color: #333;
 }
 
+.low-quality .patterns-dropdown-toggle {
+    transition: none;
+    border-radius: 15px;
+}
+
 .patterns-dropdown-toggle:hover {
     background-color: #555;
     transform: scale(1.05);
+}
+
+.low-quality .patterns-dropdown-toggle:hover {
+    transform: none;
 }
 
 .patterns-dropdown-menu {
@@ -575,6 +746,11 @@ h1 {
     max-width: 150px;
 }
 
+.low-quality .patterns-dropdown-menu {
+    box-shadow: none;
+    border: 1px solid #444;
+}
+
 .patterns-dropdown-menu.show {
     display: block;
 }
@@ -591,25 +767,6 @@ h1 {
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #555 #222;
-}
-
-.patterns-dropdown-menu ul::-webkit-scrollbar {
-    width: 6px;
-}
-
-.patterns-dropdown-menu ul::-webkit-scrollbar-track {
-    background: #222;
-    border-radius: 3px;
-}
-
-.patterns-dropdown-menu ul::-webkit-scrollbar-thumb {
-    background-color: #555;
-    border-radius: 3px;
-    border: 1px solid #222;
-}
-
-.patterns-dropdown-menu ul::-webkit-scrollbar-thumb:hover {
-    background-color: #666;
 }
 
 .patterns-dropdown-menu li {
@@ -639,9 +796,18 @@ h1 {
     background-color: #333;
 }
 
+.low-quality .action-dropdown-toggle {
+    transition: none;
+    border-radius: 15px;
+}
+
 .action-dropdown-toggle:hover {
     background-color: #555;
     transform: scale(1.05);
+}
+
+.low-quality .action-dropdown-toggle:hover {
+    transform: none;
 }
 
 .action-dropdown-menu {
@@ -656,6 +822,11 @@ h1 {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
     z-index: 100;
     margin-bottom: 5px;
+}
+
+.low-quality .action-dropdown-menu {
+    box-shadow: none;
+    border: 1px solid #444;
 }
 
 .action-dropdown-menu.show {
@@ -674,14 +845,12 @@ h1 {
     transition: background-color 0.2s;
 }
 
-.action-dropdown-menu .dropdown-item:hover {
-    background-color: #444;
+.low-quality .action-dropdown-menu .dropdown-item {
+    transition: none;
 }
 
-.no-data {
-    color: #999;
-    font-size: 0.8em;
-    text-align: center;
+.action-dropdown-menu .dropdown-item:hover {
+    background-color: #444;
 }
 
 #popup {
@@ -714,40 +883,6 @@ h1 {
     100% { transform: rotate(360deg); }
 }
 
-.map-stats {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin: 8px 0;
-}
-
-.map-stat-item {
-    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-    border: none;
-    border-radius: 25px; 
-    padding: 6px 12px; 
-    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    font-size: 0.85em;
-    color: white;
-}
-
-.map-stat-item img {
-    height: 16px;
-    width: auto;
-    filter: drop-shadow(0 0 2px #fff);
-    vertical-align: middle;
-}
-
-.map-stat-item span {
-    font-size: 1em;
-    color: #00f2fe;
-}
-
 .load-more-container {
     display: flex;
     justify-content: center;
@@ -768,9 +903,22 @@ h1 {
     box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
 }
 
+.low-quality .load-more-btn {
+    background: #4facfe;
+    box-shadow: none;
+    transition: none;
+    border-radius: 15px;
+}
+
 .load-more-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(79, 172, 254, 0.6);
+}
+
+.low-quality .load-more-btn:hover {
+    transform: none;
+    box-shadow: none;
+    background: #00f2fe;
 }
 
 .load-more-btn:disabled {
@@ -790,6 +938,10 @@ h1 {
     font-size: 0.9em;
 }
 
+.low-quality .scroll-indicator {
+    border-radius: 10px;
+}
+
 .error-message {
     background: rgba(220, 53, 69, 0.1);
     color: #dc3545;
@@ -805,6 +957,13 @@ h1 {
     .header-container {
         flex-direction: column;
         gap: 15px;
+    }
+
+    .performance-toggle {
+        top: -30px;
+        right: 10px;
+        font-size: 0.75em;
+        padding: 6px 12px;
     }
 
     #search-container {
@@ -839,15 +998,6 @@ h1 {
         gap: 10px;
     }
 
-    .top-filters-row .filter-section, .range-filters-container .filter-section {
-        flex: none;
-        margin-bottom: 10px;
-    }
-
-    .range-filter-group {
-        margin-bottom: 15px;
-    }
-
     #map-list {
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 15px;
@@ -866,41 +1016,12 @@ h1 {
         right: -22px;
     }
 
-    .map-name {
-        font-size: 1em;
-    }
-
-    .map-artist, .map-mapper, .map-difficulty {
+    .star-rating-box {
+        top: 8px;
+        left: 8px;
+        padding: 3px 6px;
         font-size: 0.75em;
-    }
-
-    .map-tags {
-        max-width: 100%;
-        justify-content: center;
-    }
-
-    .copy-btn, .action-dropdown-toggle {
-        font-size: 0.75em;
-        padding: 5px 10px;
-    }
-
-    .filter-buttons {
-        justify-content: center;
-    }
-
-    .patterns-dropdown-menu ul {
-        max-height: 100px;
-    }
-
-    .load-more-container {
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .load-more-btn {
-        width: 80%;
-        max-width: 300px;
+        min-width: 45px;
     }
 }
 </style>
@@ -909,6 +1030,7 @@ h1 {
 
 <div class="header-container">
     <a href="/SoundSpaceCustoms/Info" class="header-button info-button">Info</a>
+    <button class="performance-toggle" id="performance-toggle">Low Quality Mode</button>
     <a href="https://faworee.github.io/SoundSpaceCustoms/SubmitMaps" class="header-button discord-button">Submit Map</a>
 </div>
 
@@ -924,7 +1046,6 @@ h1 {
                 <div class="filter-section">
                     <h3>Difficulty</h3>
                     <div class="filter-buttons" id="difficulty-filters">
-                        <button class="filter-button" data-filter="Easy">Easy</button>
                         <button class="filter-button" data-filter="Medium">Medium</button>
                         <button class="filter-button" data-filter="Hard">Hard</button>
                         <button class="filter-button" data-filter="Logic">Logic</button>
@@ -1023,459 +1144,526 @@ h1 {
 <div id="popup"></div>
 
 <script>
-    const difficultyOrder = ["Easy", "Medium", "Hard", "Logic", "Brrrr", "Tasukete"];
-    let sortAscending = true;
-    let maps = [];
-    let filteredMaps = [];
-    let selectedDifficulties = [];
-    let selectedPatterns = [];
-    let apmFilter = "all";
-    let showNewMapsOnly = false;
-    let currentDisplayCount = 50;
-    const LOAD_BATCH_SIZE = 50;
-    let isLoading = false;
-    let infiniteScrollEnabled = true;
+// Rhythia Star Rating Calculator (JavaScript port)
+class RhythiaStarCalculator {
+    constructor() {
+        this.DIFFICULTY_MULTIPLIER = 0.0675;
+        this.STRAIN_DECAY_BASE = 0.3;
+        this.STRAIN_STEP = 400;
+        this.DECAY_WEIGHT = 0.9;
+        this.NORMALISED_RADIUS = 50.0;
+        this._previousStrain = 0.0;
+    }
     
-    const searchBar = document.getElementById('search-bar');
-    const mapList = document.getElementById('map-list');
-    const sortToggle = document.getElementById('sort-toggle');
-    const filterToggle = document.getElementById('filter-toggle');
-    const filterMenu = document.getElementById('filter-menu');
-    const popup = document.getElementById('popup');
-    const loadingSpinner = document.getElementById('loading-spinner');
-    const loadMoreBtn = document.getElementById('load-more-btn');
-    const loadMoreContainer = document.getElementById('load-more-container');
-    const scrollIndicator = document.getElementById('scroll-indicator');
-
-    const durationMinInput = document.getElementById('duration-min');
-    const durationMaxInput = document.getElementById('duration-max');
-    const notesMinInput = document.getElementById('notes-min');
-    const notesMaxInput = document.getElementById('notes-max');
-    const newMapsCheckbox = document.getElementById('new-maps-only');
-
-    // Load map data from JSON file
-    async function loadMapDataFromJSON() {
+    parseRhythiaBeatmap(beatmapString) {
+        const notes = [];
+        const lines = beatmapString.trim().split(',');
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (i === 0 && !line.includes('|')) continue;
+            
+            if (line.includes('|')) {
+                try {
+                    const parts = line.split('|');
+                    if (parts.length >= 3) {
+                        const x = parseFloat(parts[0]);
+                        const y = parseFloat(parts[1]);
+                        const time = parseInt(parts[2]);
+                        
+                        const osuX = (x / 2.0) * 512;
+                        const osuY = (y / 2.0) * 384;
+                        
+                        notes.push({
+                            x: osuX,
+                            y: osuY,
+                            time: time,
+                            type: 'circle'
+                        });
+                    }
+                } catch (error) {
+                    continue;
+                }
+            }
+        }
+        
+        return notes.sort((a, b) => a.time - b.time);
+    }
+    
+    calculateDistance(note1, note2) {
+        const dx = note2.x - note1.x;
+        const dy = note2.y - note1.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    calculateStrainValue(notes, index) {
+        if (index === 0) return 0.0;
+        
+        const current = notes[index];
+        const previous = notes[index - 1];
+        const timeElapsed = current.time - previous.time;
+        const distance = this.calculateDistance(previous, current);
+        
+        let distanceStrain;
+        if (distance > this.NORMALISED_RADIUS) {
+            distanceStrain = Math.pow(distance / this.NORMALISED_RADIUS, 0.99);
+        } else {
+            distanceStrain = distance / this.NORMALISED_RADIUS;
+        }
+        
+        let timeStrain = 1.0;
+        if (timeElapsed < 25) timeStrain = 2;
+        else if (timeElapsed < 50) timeStrain = 1.75;
+        else if (timeElapsed < 100) timeStrain = 1.5;
+        else if (timeElapsed < 200) timeStrain = 1.25;
+        else if (timeElapsed > 400) timeStrain = Math.max(0.3, 1.0 - (timeElapsed - 200) / 1000.0);
+        
+        let strain = distanceStrain * timeStrain;
+        
+        if (index > 0) {
+            const decayFactor = Math.pow(this.STRAIN_DECAY_BASE, timeElapsed / this.STRAIN_STEP);
+            strain += this._previousStrain * decayFactor;
+        }
+        
+        this._previousStrain = strain;
+        return strain;
+    }
+    
+    calculateAimStrain(notes) {
+        if (notes.length < 2) return new Array(notes.length).fill(0.0);
+        
+        const strains = [0.0];
+        this._previousStrain = 0.0;
+        
+        for (let i = 1; i < notes.length; i++) {
+            let strain = this.calculateStrainValue(notes, i);
+            
+            if (i >= 2) {
+                const prevPrev = notes[i-2];
+                const prev = notes[i-1];
+                const curr = notes[i];
+                
+                const v1X = prev.x - prevPrev.x;
+                const v1Y = prev.y - prevPrev.y;
+                const v2X = curr.x - prev.x;
+                const v2Y = curr.y - prev.y;
+                
+                const dotProduct = v1X * v2X + v1Y * v2Y;
+                const det = v1X * v2Y - v1Y * v2X;
+                const angle = Math.abs(Math.atan2(det, dotProduct));
+                
+                if (angle > Math.PI / 6) {
+                    const angleBonus = Math.min(1.5, 1.0 + angle / Math.PI);
+                    strain *= angleBonus;
+                }
+            }
+            
+            strains.push(strain);
+        }
+        
+        return strains;
+    }
+    
+    calculateDifficultyValue(strains) {
+        if (!strains || strains.length === 0) return 0.0;
+        
+        const sortedStrains = [...strains].sort((a, b) => b - a);
+        let difficulty = 0.0;
+        let weight = 1.0;
+        
+        for (const strain of sortedStrains) {
+            difficulty += strain * weight;
+            weight *= this.DECAY_WEIGHT;
+        }
+        
+        return difficulty;
+    }
+    
+    calculateStarRatingFromString(beatmapString) {
         try {
-            loadingSpinner.style.display = 'block';
-            const response = await fetch('Mapdata.json');
+            const notes = this.parseRhythiaBeatmap(beatmapString);
             
-            if (!response.ok) {
-                throw new Error(`Failed to load map data: ${response.status} ${response.statusText}`);
+            if (notes.length < 2) {
+                return { error: "Need at least 2 notes for calculation" };
             }
             
-            const mapData = await response.json();
-            
-            if (!Array.isArray(mapData)) {
-                throw new Error('Invalid JSON format: Expected an array of maps');
+            const filteredNotes = [notes[0]];
+            for (let i = 1; i < notes.length; i++) {
+                const currNote = notes[i];
+                const lastKept = filteredNotes[filteredNotes.length - 1];
+                const distance = this.calculateDistance(lastKept, currNote);
+                if (distance >= 0) {
+                    filteredNotes.push(currNote);
+                }
             }
             
-            // Process the loaded data
-            const mapsWithStats = await Promise.all(mapData.map(async (mapArray) => {
+            if (filteredNotes.length < 1) {
+                return { error: "Not enough valid notes after filtering" };
+            }
+            
+            const aimStrains = this.calculateAimStrain(filteredNotes);
+            const aimDifficulty = this.calculateDifficultyValue(aimStrains);
+            
+            let starRating = Math.pow(aimDifficulty, 0.5) * this.DIFFICULTY_MULTIPLIER;
+            const rhythiaMultiplier = 3.5;
+            starRating *= rhythiaMultiplier;
+            
+            return {
+                starRating: parseFloat(starRating.toFixed(2)),
+                aimDifficulty: parseFloat(aimDifficulty.toFixed(2)),
+                noteCount: filteredNotes.length,
+                algorithm: "osu!-based (Rhythia compatible)"
+            };
+            
+        } catch (error) {
+            return { error: `Calculation error: ${error.message}` };
+        }
+    }
+}
+
+// Global variables
+let isLowQualityMode = false;
+const difficultyOrder = ["Easy", "Medium", "Hard", "Logic", "Brrrr", "Tasukete"];
+let sortAscending = true;
+let maps = [];
+let filteredMaps = [];
+let selectedDifficulties = [];
+let selectedPatterns = [];
+let apmFilter = "all";
+let showNewMapsOnly = false;
+let currentDisplayCount = 50;
+const LOAD_BATCH_SIZE = 50;
+let isLoading = false;
+
+const mapDataCache = new Map();
+const starRatingCache = new Map();
+const starCalculator = new RhythiaStarCalculator();
+
+// DOM elements
+const searchBar = document.getElementById('search-bar');
+const mapList = document.getElementById('map-list');
+const sortToggle = document.getElementById('sort-toggle');
+const filterToggle = document.getElementById('filter-toggle');
+const filterMenu = document.getElementById('filter-menu');
+const popup = document.getElementById('popup');
+const loadingSpinner = document.getElementById('loading-spinner');
+const loadMoreBtn = document.getElementById('load-more-btn');
+const scrollIndicator = document.getElementById('scroll-indicator');
+const performanceToggle = document.getElementById('performance-toggle');
+
+// Filter inputs
+const durationMinInput = document.getElementById('duration-min');
+const durationMaxInput = document.getElementById('duration-max');
+const notesMinInput = document.getElementById('notes-min');
+const notesMaxInput = document.getElementById('notes-max');
+const newMapsCheckbox = document.getElementById('new-maps-only');
+
+// Star rating functions
+async function calculateStarRating(rawData) {
+    if (!rawData || typeof rawData !== 'string') return null;
+    
+    if (starRatingCache.has(rawData)) {
+        return starRatingCache.get(rawData);
+    }
+    
+    const result = starCalculator.calculateStarRatingFromString(rawData);
+    
+    if (result.error) {
+        console.warn('Star rating calculation error:', result.error);
+        return null;
+    }
+    
+    starRatingCache.set(rawData, result.starRating);
+    return result.starRating;
+}
+
+function createStarRatingBox(starRating) {
+    const box = document.createElement('div');
+    box.className = 'star-rating-box';
+    
+    if (starRating === null) {
+        box.classList.add('calculating');
+        box.innerHTML = `
+            <span>...</span>
+            <svg class="star-icon" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+        `;
+    } else {
+        box.innerHTML = `
+            <span>${starRating}</span>
+            <svg class="star-icon" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+        `;
+    }
+    
+    return box;
+}
+
+function updateStarRatingBox(box, starRating) {
+    if (starRating === null) {
+        box.classList.remove('calculating');
+        box.classList.add('error');
+        box.innerHTML = `
+            <span>ERR</span>
+            <svg class="star-icon" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+        `;
+    } else {
+        box.classList.remove('calculating', 'error');
+        box.innerHTML = `
+            <span>${starRating}</span>
+            <svg class="star-icon" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+        `;
+    }
+}
+
+// Performance toggle
+performanceToggle.addEventListener('click', () => {
+    isLowQualityMode = !isLowQualityMode;
+    document.body.classList.toggle('low-quality', isLowQualityMode);
+    performanceToggle.classList.toggle('active', isLowQualityMode);
+    performanceToggle.textContent = isLowQualityMode ? 'High Quality Mode' : 'Low Quality Mode';
+    
+    try {
+        localStorage.setItem('soundSpaceLowQuality', isLowQualityMode.toString());
+    } catch (e) {
+        console.warn('Could not save performance preference:', e);
+    }
+    
+    if (maps.length > 0) {
+        renderMaps();
+    }
+});
+
+// Load saved preference
+try {
+    const savedPreference = localStorage.getItem('soundSpaceLowQuality');
+    if (savedPreference === 'true') {
+        performanceToggle.click();
+    }
+} catch (e) {
+    console.warn('Could not load performance preference:', e);
+}
+
+// Utility functions
+function parseMapData(rawData) {
+    if (!rawData || typeof rawData !== 'string') {
+        return { duration: 0, noteCount: 0 };
+    }
+    
+    const firstCommaIndex = rawData.indexOf(',');
+    if (firstCommaIndex === -1) {
+        return { duration: 0, noteCount: 0 };
+    }
+    
+    const notesData = rawData.substring(firstCommaIndex + 1);
+    const noteArray = notesData.split(',');
+    const noteCount = noteArray.length;
+    
+    if (noteCount === 0) {
+        return { duration: 0, noteCount: 0 };
+    }
+    
+    try {
+        const firstNote = noteArray[0];
+        const firstNoteParts = firstNote.split('|');
+        const startTime = parseFloat(firstNoteParts[2]) || 0;
+        
+        const lastNote = noteArray[noteArray.length - 1];
+        const lastNoteParts = lastNote.split('|');
+        const endTime = parseFloat(lastNoteParts[2]) || 0;
+        
+        const durationMilliseconds = endTime - startTime;
+        return { duration: Math.max(0, durationMilliseconds), noteCount: noteCount };
+    } catch (error) {
+        console.warn('Error parsing map data:', error);
+        return { duration: 0, noteCount: noteCount };
+    }
+}
+
+function formatDuration(milliseconds) {
+    if (milliseconds <= 0 || isNaN(milliseconds)) return "--:--";
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function getRawUrl(url) {
+    if (url.includes('github.com')) {
+        let newUrl = url.replace('github.com', 'raw.githubusercontent.com');
+        newUrl = newUrl.replace('/blob/', '/').replace('/raw/', '/');
+        return newUrl;
+    }
+    if (url.includes('gitlab.com') && url.includes('/-/blob/')) {
+        return url.replace('/-/blob/', '/-/raw/');
+    }
+    return url;
+}
+
+async function fetchMapData(url) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    try {
+        const response = await fetch(url, {
+            signal: controller.signal,
+            cache: 'default'
+        });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.text();
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            console.warn("Fetch timeout for:", url);
+        } else {
+            console.error("Error fetching map data:", error);
+        }
+        return null;
+    }
+}
+
+// Main data loading function
+async function loadMapDataFromJSON() {
+    try {
+        loadingSpinner.style.display = 'block';
+        const timestamp = Date.now();
+        const response = await fetch(`Mapdata.json?v=${timestamp}`, {
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load map data: ${response.status} ${response.statusText}`);
+        }
+        
+        const mapData = await response.json();
+        
+        if (!Array.isArray(mapData)) {
+            throw new Error('Invalid JSON format: Expected an array of maps');
+        }
+        
+        const BATCH_SIZE = isLowQualityMode ? 20 : 10;
+        const mapsWithStats = [];
+        
+        for (let i = 0; i < mapData.length; i += BATCH_SIZE) {
+            const batch = mapData.slice(i, i + BATCH_SIZE);
+            const batchPromises = batch.map(async (mapArray) => {
                 if (!Array.isArray(mapArray) || mapArray.length < 6) {
                     console.warn('Invalid map data format:', mapArray);
                     return null;
                 }
                 
                 const [link, mapName, artist, mapper, difficulty, patterns, isNew] = mapArray;
+                
+                const mapObj = {
+                    link: link,
+                    mapName: mapName,
+                    artist: artist,
+                    mapper: mapper,
+                    difficulty: difficulty,
+                    patterns: patterns,
+                    isNew: isNew || false,
+                    duration: undefined,
+                    noteCount: undefined,
+                    starRating: null
+                };
+                
+                if (isLowQualityMode) {
+                    return mapObj;
+                }
+                
                 const rawLink = getRawUrl(link);
                 
                 try {
-                    const rawData = await fetchMapData(rawLink);
-                    const stats = rawData ? parseMapData(rawData) : { duration: undefined, noteCount: undefined };
+                    let rawData = mapDataCache.get(rawLink);
+                    if (!rawData) {
+                        rawData = await fetchMapData(rawLink);
+                        if (rawData) {
+                            mapDataCache.set(rawLink, rawData);
+                        }
+                    }
                     
-                    return {
-                        link: link,
-                        mapName: mapName,
-                        artist: artist,
-                        mapper: mapper,
-                        difficulty: difficulty,
-                        patterns: patterns,
-                        isNew: isNew || false,
-                        duration: stats.duration,
-                        noteCount: stats.noteCount
-                    };
+                    if (rawData) {
+                        const stats = parseMapData(rawData);
+                        mapObj.duration = stats.duration;
+                        mapObj.noteCount = stats.noteCount;
+                        
+                        const starRating = await calculateStarRating(rawData);
+                        mapObj.starRating = starRating;
+                    }
+                    
+                    return mapObj;
                 } catch (error) {
                     console.error("Error fetching map data for link:", rawLink, error);
-                    return {
-                        link: link,
-                        mapName: mapName,
-                        artist: artist,
-                        mapper: mapper,
-                        difficulty: difficulty,
-                        patterns: patterns,
-                        isNew: isNew || false,
-                        duration: undefined,
-                        noteCount: undefined
-                    };
+                    return mapObj;
                 }
-            }));
+            });
             
-            // Filter out any null entries from invalid data
-            maps = mapsWithStats.filter(map => map !== null);
+            const batchResults = await Promise.all(batchPromises);
+            mapsWithStats.push(...batchResults);
             
-            if (maps.length === 0) {
-                throw new Error('No valid map data found');
+            if (i + BATCH_SIZE < mapData.length) {
+                await new Promise(resolve => setTimeout(resolve, isLowQualityMode ? 50 : 100));
             }
-            
-            console.log(`Loaded ${maps.length} maps from JSON file`);
-            filterAndRenderMaps();
-            
-        } catch (error) {
-            console.error('Error loading map data:', error);
-            loadingSpinner.style.display = 'none';
-            
-            // Display error message to user
-            mapList.innerHTML = `
-                <div class="error-message">
-                    <h3>Failed to Load Map Data</h3>
-                    <p>Error: ${error.message}</p>
-                    <p>Please ensure that:</p>
-                    <ul style="text-align: left; display: inline-block;">
-                        <li>The file "Mapdata.json" exists in the same directory</li>
-                        <li>The JSON file contains valid map data in the correct format</li>
-                        <li>Your web server allows loading local JSON files</li>
-                    </ul>
-                    <p>If running locally, you may need to serve this through a web server rather than opening the HTML file directly.</p>
-                </div>
-            `;
         }
-    }
-
-    function parseMapData(rawData) {
-        if (!rawData || typeof rawData !== 'string') {
-            return { duration: 0, noteCount: 0 };
-        }
-        const firstCommaIndex = rawData.indexOf(',');
-        if (firstCommaIndex === -1) {
-            return { duration: 0, noteCount: 0 };
-        }
-        const notesData = rawData.substring(firstCommaIndex + 1);
-        const noteArray = notesData.split(',');
-        const noteCount = noteArray.length;
-        if (noteCount === 0) {
-            return { duration: 0, noteCount: 0 };
-        }
-        const firstNote = noteArray[0];
-        const firstNoteParts = firstNote.split('|');
-        const startTime = parseFloat(firstNoteParts[2]);
-        const lastNote = noteArray[noteArray.length - 1];
-        const lastNoteParts = lastNote.split('|');
-        const endTime = parseFloat(lastNoteParts[2]);
-        const durationMilliseconds = endTime - startTime;
-        return { duration: Math.max(0, durationMilliseconds), noteCount: noteCount };
-    }
-
-    function formatDuration(milliseconds) {
-        if (milliseconds <= 0 || isNaN(milliseconds)) return "--:--";
-        const totalSeconds = Math.floor(milliseconds / 1000);
-        const mins = Math.floor(totalSeconds / 60);
-        const secs = totalSeconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
-
-    function parseTimeToMilliseconds(timeString) {
-        if (!timeString || timeString === "") return null;
-        const parts = timeString.split(':');
-        if (parts.length !== 2) return null;
-        const mins = parseInt(parts[0]) || 0;
-        const secs = parseInt(parts[1]) || 0;
-        return (mins * 60 + secs) * 1000;
-    }
-
-    function matchesRangeFilter(value, minInput, maxInput) {
-        const minVal = minInput === null ? -Infinity : minInput;
-        const maxVal = maxInput === null ? Infinity : maxInput;
-        return value >= minVal && value <= maxVal;
-    }
-
-    async function fetchMapData(url) {
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return await response.text();
-        } catch (error) {
-            console.error("Error fetching map data:", error);
-            return null;
-        }
-    }
-
-    function checkScroll() {
-        if (!infiniteScrollEnabled || isLoading) return;
         
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        const windowHeight = window.innerHeight;
-        const documentHeight = document.documentElement.scrollHeight;
+        maps = mapsWithStats.filter(map => map !== null);
         
-        if (scrollTop + windowHeight >= documentHeight - 200) {
-            loadMoreMaps();
+        if (maps.length === 0) {
+            throw new Error('No valid map data found');
         }
-    }
-
-    function loadMoreMaps() {
-        if (isLoading || currentDisplayCount >= filteredMaps.length) return;
         
-        isLoading = true;
-        loadingSpinner.style.display = 'block';
-        loadMoreBtn.disabled = true;
-        loadMoreBtn.textContent = 'Loading...';
-        
-        setTimeout(() => {
-            const previousCount = currentDisplayCount;
-            currentDisplayCount = Math.min(currentDisplayCount + LOAD_BATCH_SIZE, filteredMaps.length);
-            
-            const fragment = document.createDocumentFragment();
-            for (let i = previousCount; i < currentDisplayCount; i++) {
-                const m = filteredMaps[i];
-                const card = createMapCard(m);
-                fragment.appendChild(card);
-            }
-            mapList.appendChild(fragment);
-            
-            updateLoadMoreButton();
-            isLoading = false;
-            loadingSpinner.style.display = 'none';
-        }, 300);
-    }
-
-    function updateLoadMoreButton() {
-        const remainingMaps = filteredMaps.length - currentDisplayCount;
-        
-        if (remainingMaps <= 0) {
-            loadMoreBtn.style.display = 'none';
-            scrollIndicator.textContent = `All ${filteredMaps.length} maps loaded`;
-        } else {
-            loadMoreBtn.style.display = 'block';
-            loadMoreBtn.disabled = false;
-            loadMoreBtn.textContent = `Load ${Math.min(LOAD_BATCH_SIZE, remainingMaps)} More Maps`;
-            scrollIndicator.textContent = `${remainingMaps} maps remaining - Scroll to auto-load`;
-        }
-    }
-
-    window.addEventListener('scroll', checkScroll);
-    
-    loadMoreBtn.addEventListener('click', () => {
-        if (!isLoading) {
-            loadMoreMaps();
-        }
-    });
-
-    let searchTimeout;
-
-    searchBar.addEventListener('input', () => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            currentDisplayCount = LOAD_BATCH_SIZE;
-            filterAndRenderMaps();
-        }, 300);
-    });
-
-    filterToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        filterMenu.classList.toggle('show');
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!filterToggle.contains(e.target) && !filterMenu.contains(e.target)) {
-            filterMenu.classList.remove('show');
-        }
-    });
-
-    newMapsCheckbox.addEventListener('change', () => {
-        showNewMapsOnly = newMapsCheckbox.checked;
-        currentDisplayCount = LOAD_BATCH_SIZE;
+        console.log(`Loaded ${maps.length} maps from JSON file`);
         filterAndRenderMaps();
-    });
-
-    sortToggle.addEventListener('click', () => {
-        sortAscending = !sortAscending;
-        sortToggle.textContent = sortAscending ? "Sort: Easy → Hard" : "Sort: Hard → Easy";
-        currentDisplayCount = LOAD_BATCH_SIZE;
-        filterAndRenderMaps();
-    });
-
-    [durationMinInput, durationMaxInput, notesMinInput, notesMaxInput].forEach(input => {
-        input.addEventListener('input', () => {
-            currentDisplayCount = LOAD_BATCH_SIZE;
-            filterAndRenderMaps();
-        });
-    });
-
-    document.querySelectorAll('#difficulty-filters .filter-button').forEach(button => {
-        button.addEventListener('click', () => {
-            const difficulty = button.dataset.filter;
-            button.classList.toggle('active');
-            if (button.classList.contains('active')) {
-                if (!selectedDifficulties.includes(difficulty)) {
-                    selectedDifficulties.push(difficulty);
-                }
-            } else {
-                selectedDifficulties = selectedDifficulties.filter(d => d !== difficulty);
-            }
-            currentDisplayCount = LOAD_BATCH_SIZE;
-            filterAndRenderMaps();
-        });
-    });
-
-    document.querySelectorAll('#pattern-filters .filter-button').forEach(button => {
-        button.addEventListener('click', () => {
-            const pattern = button.dataset.filter;
-            button.classList.toggle('active');
-            if (button.classList.contains('active')) {
-                if (!selectedPatterns.includes(pattern)) {
-                    selectedPatterns.push(pattern);
-                }
-            } else {
-                selectedPatterns = selectedPatterns.filter(p => p !== pattern);
-            }
-            currentDisplayCount = LOAD_BATCH_SIZE;
-            filterAndRenderMaps();
-        });
-    });
-
-    document.querySelectorAll('input[name="apm-filter"]').forEach(radio => {
-        radio.addEventListener('change', () => {
-            apmFilter = radio.value;
-            currentDisplayCount = LOAD_BATCH_SIZE;
-            filterAndRenderMaps();
-        });
-    });
-
-    document.querySelector('.clear-filters').addEventListener('click', () => {
-        selectedDifficulties = [];
-        selectedPatterns = [];
-        apmFilter = "all";
-        showNewMapsOnly = false;
-        document.querySelectorAll('.filter-button.active').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.getElementById('apm-all').checked = true;
-        newMapsCheckbox.checked = false;
-        durationMinInput.value = '';
-        durationMaxInput.value = '';
-        notesMinInput.value = '';
-        notesMaxInput.value = '';
-        currentDisplayCount = LOAD_BATCH_SIZE;
-        filterAndRenderMaps();
-    });
-
-    document.querySelector('.apply-filters').addEventListener('click', () => {
-        currentDisplayCount = LOAD_BATCH_SIZE;
-        filterAndRenderMaps();
-        filterMenu.classList.remove('show');
-    });
-
-    function showPopup(message, isError = false) {
-        popup.textContent = message;
-        popup.style.backgroundColor = isError ? "#dc3545" : "#28a745";
-        popup.style.display = "block";
-        setTimeout(() => {
-            popup.style.display = "none";
-        }, 2500);
-    }
-
-    function isApmMap(artist) {
-        return artist.toLowerCase().includes('apm music');
-    }
-
-    function getRawUrl(url) {
-        if (url.includes('github.com')) {
-            let newUrl = url.replace('github.com', 'raw.githubusercontent.com');
-            newUrl = newUrl.replace('/blob/', '/').replace('/raw/', '/');
-            return newUrl;
-        }
-        if (url.includes('gitlab.com') && url.includes('/-/blob/')) {
-            return url.replace('/-/blob/', '/-/raw/');
-        }
-        return url;
-    }
-
-    function filterAndRenderMaps() {
-        const searchText = searchBar.value.toLowerCase();
         
-        const durationMin = parseTimeToMilliseconds(durationMinInput.value);
-        const durationMax = parseTimeToMilliseconds(durationMaxInput.value);
-        const notesMin = notesMinInput.value ? parseInt(notesMinInput.value) : null;
-        const notesMax = notesMaxInput.value ? parseInt(notesMaxInput.value) : null;
-        
-        filteredMaps = maps.filter(m => {
-            const matchesSearch = m.mapName.toLowerCase().includes(searchText) || 
-                                m.artist.toLowerCase().includes(searchText) || 
-                                m.mapper.toLowerCase().includes(searchText);
-            const matchesDifficulty = selectedDifficulties.length === 0 || selectedDifficulties.includes(m.difficulty);
-            const matchesPatterns = selectedPatterns.length === 0 || selectedPatterns.every(pattern => m.patterns.includes(pattern));
-            
-            const isApm = isApmMap(m.artist);
-            let matchesApm = true;
-            if (apmFilter === "only") {
-                matchesApm = isApm;
-            } else if (apmFilter === "none") {
-                matchesApm = !isApm;
-            }
-
-            const matchesDuration = matchesRangeFilter(m.duration || 0, durationMin, durationMax);
-            const matchesNotes = matchesRangeFilter(m.noteCount || 0, notesMin, notesMax);
-            const matchesNewFilter = !showNewMapsOnly || m.isNew;
-
-            return matchesSearch && matchesDifficulty && matchesPatterns && matchesApm && 
-                   matchesDuration && matchesNotes && matchesNewFilter;
-        });
-
-        filteredMaps.sort((a, b) => {
-            const diffA = difficultyOrder.indexOf(a.difficulty);
-            const diffB = difficultyOrder.indexOf(b.difficulty);
-            const safeA = diffA === -1 ? difficultyOrder.length : diffA;
-            const safeB = diffB === -1 ? difficultyOrder.length : diffB;
-            const difficultyComparison = sortAscending ? safeA - safeB : safeB - safeA;
-            if (difficultyComparison !== 0) {
-                return difficultyComparison;
-            }
-            if (a.isNew !== b.isNew) {
-                return a.isNew ? -1 : 1;
-            }
-            const artistComparison = a.artist.localeCompare(b.artist);
-            if (artistComparison !== 0) {
-                return artistComparison;
-            }
-            const mapNameComparison = a.mapName.localeCompare(b.mapName);
-            if (mapNameComparison !== 0) {
-                return mapNameComparison;
-            }
-            return a.mapper.localeCompare(b.mapper);
-        });
-
-        renderMaps();
-    }
-
-    function renderMaps() {
-        mapList.innerHTML = "";
-        const itemsToShow = Math.min(filteredMaps.length, currentDisplayCount);
-        const fragment = document.createDocumentFragment();
-        for (let i = 0; i < itemsToShow; i++) {
-            const m = filteredMaps[i];
-            const card = createMapCard(m);
-            fragment.appendChild(card);
-        }
-        mapList.appendChild(fragment);
-        updateLoadMoreButton();
+    } catch (error) {
+        console.error('Error loading map data:', error);
         loadingSpinner.style.display = 'none';
+        mapList.innerHTML = `
+            <div class="error-message">
+                <h3>Failed to Load Map Data</h3>
+                <p>Error: ${error.message}</p>
+                <p>Please ensure that the "Mapdata.json" file exists and contains valid map data.</p>
+                <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #4facfe; color: white; border: none; border-radius: 5px; cursor: pointer;">Retry</button>
+            </div>
+        `;
     }
+}
 
-    function createMapCard(m) {
-        const card = document.createElement('div');
-        card.classList.add('map-card');
-        let mapDifficulty = m.difficulty.toLowerCase();
-        if (m.difficulty === "No Data") {
-            mapDifficulty = "brrrr";
-        }
-        card.classList.add(mapDifficulty);
-        let newTagHtml = '';
-        if (m.isNew) {
-            newTagHtml = '<div class="new-tag">NEW</div>';
-        }
-
-        let mapStatsHtml = `
+// Map card creation
+function createMapCard(m) {
+    const card = document.createElement('div');
+    card.classList.add('map-card');
+    let mapDifficulty = m.difficulty.toLowerCase();
+    if (m.difficulty === "No Data") {
+        mapDifficulty = "brrrr";
+    }
+    card.classList.add(mapDifficulty);
+    
+    // Create star rating box
+    const starRatingBox = createStarRatingBox(m.starRating);
+    
+    let newTagHtml = '';
+    if (m.isNew) {
+        newTagHtml = '<div class="new-tag">NEW</div>';
+    }
+    
+    let mapStatsHtml = '';
+    if (!isLowQualityMode || (m.duration !== undefined && m.noteCount !== undefined)) {
+        mapStatsHtml = `
             <div class="map-stats">
                 <div class="map-stat-item">
                     <img src="https://i.imgur.com/lv0ynEi.png" alt="Timer Icon">
@@ -1487,8 +1675,10 @@ h1 {
                 </div>
             </div>
         `;
-
-        let patternsHtml = '';
+    }
+    
+    let patternsHtml = '';
+    if (m.patterns && m.patterns.length > 0) {
         const patternListHtml = m.patterns.map(p => {
             const patternName = p === "No Data" ? "No Pattern Data" : p;
             return `<li>${patternName}</li>`;
@@ -1497,104 +1687,468 @@ h1 {
             <div class="patterns-dropdown-container">
                 <button class="patterns-dropdown-toggle" onclick="togglePatternsDropdown(this)">Show Patterns</button>
                 <div class="patterns-dropdown-menu">
-                    <ul>
-                        ${patternListHtml}
-                    </ul>
+                    <ul>${patternListHtml}</ul>
                 </div>
             </div>
         `;
-
-        const escapedLink = m.link.replace(/'/g, "\\'");
-        card.innerHTML = `
-            ${newTagHtml}
-            <div class="map-content">
-                <div class="map-artist">${m.artist}</div>
-                <div class="map-name"><a href="${m.link}" target="_blank">${m.mapName}</a></div>
-                <div class="map-mapper">Mapped by: ${m.mapper}</div>
-                <div class="map-difficulty">Difficulty: ${m.difficulty}</div>
-                ${mapStatsHtml}
+    } else {
+        patternsHtml = `
+            <div class="patterns-dropdown-container">
+                <button class="patterns-dropdown-toggle no-click">No Patterns</button>
             </div>
-            <div class="map-footer">
-                ${patternsHtml}
-                <div class="action-buttons">
-                    <button class="copy-btn" onclick="copyLink('${escapedLink}', this)">Copy Link</button>
-                    <div class="action-dropdown">
-                        <button class="action-dropdown-toggle" onclick="toggleActionDropdown(this)">&#x22EE;</button>
-                        <div class="action-dropdown-menu">
-                            <a href="#" class="dropdown-item" onclick="copyRawData('${escapedLink}')">Copy Raw</a>
-                        </div>
+        `;
+    }
+    
+    const escapedLink = m.link.replace(/'/g, "\\'");
+    card.innerHTML = `
+        ${newTagHtml}
+        <div class="map-content">
+            <div class="map-artist">${m.artist}</div>
+            <div class="map-name"><a href="${m.link}" target="_blank" rel="noopener">${m.mapName}</a></div>
+            <div class="map-mapper">Mapped by: ${m.mapper}</div>
+            <div class="map-difficulty">Difficulty: ${m.difficulty}</div>
+            ${mapStatsHtml}
+        </div>
+        <div class="map-footer">
+            ${patternsHtml}
+            <div class="action-buttons">
+                <button class="copy-btn" onclick="copyLink('${escapedLink}', this)">Copy Link</button>
+                <div class="action-dropdown">
+                    <button class="action-dropdown-toggle" onclick="toggleActionDropdown(this)">&#x22EE;</button>
+                    <div class="action-dropdown-menu">
+                        <a href="#" class="dropdown-item" onclick="copyRawData('${escapedLink}')">Copy Raw</a>
                     </div>
                 </div>
             </div>
-        `;
-        return card;
+        </div>
+    `;
+    
+    // Add star rating box
+    card.appendChild(starRatingBox);
+    
+    // Calculate star rating if not available and not in low quality mode
+    if (m.starRating === null && !isLowQualityMode) {
+        calculateStarRatingAsync(m.link, starRatingBox);
     }
+    
+    return card;
+}
 
-    function copyLink(link, button) {
-        navigator.clipboard.writeText(link).then(() => {
-            button.classList.add("copied");
-            button.textContent = "Copied!";
-            showPopup("Link copied!", false);
-            setTimeout(() => {
-                button.classList.remove("copied");
-                button.textContent = "Copy Link";
-            }, 1000);
-        }).catch(err => {
-            showPopup("Failed to copy link.", true);
-            console.error('Failed to copy link:', err);
-        });
-    }
-
-    async function copyRawData(link) {
-        try {
-            const rawContent = await fetchMapData(link);
-            if (rawContent) {
-                navigator.clipboard.writeText(rawContent).then(() => {
-                    showPopup("Raw data copied!", false);
-                }).catch(() => {
-                    showPopup("Failed to copy raw data.", true);
-                });
-            } else {
-                showPopup("Failed to fetch raw data.", true);
+async function calculateStarRatingAsync(link, starRatingBox) {
+    try {
+        const rawLink = getRawUrl(link);
+        let rawData = mapDataCache.get(rawLink);
+        
+        if (!rawData) {
+            rawData = await fetchMapData(rawLink);
+            if (rawData) {
+                mapDataCache.set(rawLink, rawData);
             }
-        } catch (error) {
-            showPopup("Failed to copy raw data.", true);
-            console.error('Failed to fetch or copy raw data:', error);
         }
-    }
 
-    function togglePatternsDropdown(button) {
-        const dropdownMenu = button.nextElementSibling;
-        dropdownMenu.classList.toggle('show');
-        const allMenus = document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu');
-        allMenus.forEach(menu => {
-            if (menu !== dropdownMenu) {
-                menu.classList.remove('show');
-            }
-        });
-    }
-
-    function toggleActionDropdown(button) {
-        const dropdownMenu = button.nextElementSibling;
-        dropdownMenu.classList.toggle('show');
-        const allMenus = document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu');
-        allMenus.forEach(menu => {
-            if (menu !== dropdownMenu) {
-                menu.classList.remove('show');
-            }
-        });
-    }
-
-    document.addEventListener('click', (event) => {
-        if (!event.target.closest('.patterns-dropdown-container') && !event.target.closest('.action-dropdown')) {
-            document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu').forEach(menu => {
-                menu.classList.remove('show');
-            });
+        if (rawData) {
+            const starRating = await calculateStarRating(rawData);
+            updateStarRatingBox(starRatingBox, starRating);
+        } else {
+            updateStarRatingBox(starRatingBox, null);
         }
+    } catch (error) {
+        console.error('Error calculating star rating:', error);
+        updateStarRatingBox(starRatingBox, null);
+    }
+}
+
+// Event listeners and utility functions
+function parseTimeToMilliseconds(timeString) {
+    if (!timeString || timeString === "") return null;
+    const parts = timeString.split(':');
+    if (parts.length !== 2) return null;
+    const mins = parseInt(parts[0]) || 0;
+    const secs = parseInt(parts[1]) || 0;
+    return (mins * 60 + secs) * 1000;
+}
+
+function matchesRangeFilter(value, minInput, maxInput) {
+    const minVal = minInput === null ? -Infinity : minInput;
+    const maxVal = maxInput === null ? Infinity : maxInput;
+    return value >= minVal && value <= maxVal;
+}
+
+function isApmMap(artist) {
+    return artist.toLowerCase().includes('apm music');
+}
+
+function showPopup(message, isError = false) {
+    popup.textContent = message;
+    popup.style.backgroundColor = isError ? "#dc3545" : "#28a745";
+    popup.style.display = "block";
+    setTimeout(() => {
+        popup.style.display = "none";
+    }, 2500);
+}
+
+// Filter and render functions
+function filterAndRenderMaps() {
+    const searchText = searchBar.value.toLowerCase();
+    
+    const durationMin = parseTimeToMilliseconds(durationMinInput.value);
+    const durationMax = parseTimeToMilliseconds(durationMaxInput.value);
+    const notesMin = notesMinInput.value ? parseInt(notesMinInput.value) : null;
+    const notesMax = notesMaxInput.value ? parseInt(notesMaxInput.value) : null;
+    
+    filteredMaps = maps.filter(m => {
+        const matchesSearch = m.mapName.toLowerCase().includes(searchText) || 
+                            m.artist.toLowerCase().includes(searchText) || 
+                            m.mapper.toLowerCase().includes(searchText);
+        const matchesDifficulty = selectedDifficulties.length === 0 || selectedDifficulties.includes(m.difficulty);
+        const matchesPatterns = selectedPatterns.length === 0 || selectedPatterns.every(pattern => m.patterns.includes(pattern));
+        
+        const isApm = isApmMap(m.artist);
+        let matchesApm = true;
+        if (apmFilter === "only") {
+            matchesApm = isApm;
+        } else if (apmFilter === "none") {
+            matchesApm = !isApm;
+        }
+
+        const matchesDuration = matchesRangeFilter(m.duration || 0, durationMin, durationMax);
+        const matchesNotes = matchesRangeFilter(m.noteCount || 0, notesMin, notesMax);
+        const matchesNewFilter = !showNewMapsOnly || m.isNew;
+
+        return matchesSearch && matchesDifficulty && matchesPatterns && matchesApm && 
+               matchesDuration && matchesNotes && matchesNewFilter;
     });
 
-    // Initialize the application
-    document.addEventListener("DOMContentLoaded", loadMapDataFromJSON);
+    filteredMaps.sort((a, b) => {
+        const diffA = difficultyOrder.indexOf(a.difficulty);
+        const diffB = difficultyOrder.indexOf(b.difficulty);
+        const safeA = diffA === -1 ? difficultyOrder.length : diffA;
+        const safeB = diffB === -1 ? difficultyOrder.length : diffB;
+        const difficultyComparison = sortAscending ? safeA - safeB : safeB - safeA;
+        if (difficultyComparison !== 0) {
+            return difficultyComparison;
+        }
+        if (a.isNew !== b.isNew) {
+            return a.isNew ? -1 : 1;
+        }
+        const artistComparison = a.artist.localeCompare(b.artist);
+        if (artistComparison !== 0) {
+            return artistComparison;
+        }
+        const mapNameComparison = a.mapName.localeCompare(b.mapName);
+        if (mapNameComparison !== 0) {
+            return mapNameComparison;
+        }
+        return a.mapper.localeCompare(b.mapper);
+    });
+
+    renderMaps();
+}
+
+function renderMaps() {
+    mapList.innerHTML = "";
+    const itemsToShow = Math.min(filteredMaps.length, currentDisplayCount);
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < itemsToShow; i++) {
+        const m = filteredMaps[i];
+        const card = createMapCard(m);
+        fragment.appendChild(card);
+    }
+    mapList.appendChild(fragment);
+    updateLoadMoreButton();
+    loadingSpinner.style.display = 'none';
+}
+
+function updateLoadMoreButton() {
+    const remainingMaps = filteredMaps.length - currentDisplayCount;
+    
+    if (remainingMaps <= 0) {
+        loadMoreBtn.style.display = 'none';
+        scrollIndicator.textContent = `All ${filteredMaps.length} maps loaded`;
+    } else {
+        loadMoreBtn.style.display = 'block';
+        loadMoreBtn.disabled = false;
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        loadMoreBtn.textContent = `Load ${Math.min(batchSize, remainingMaps)} More Maps`;
+        scrollIndicator.textContent = `${remainingMaps} maps remaining - Scroll to auto-load`;
+    }
+}
+
+function loadMoreMaps() {
+    if (isLoading || currentDisplayCount >= filteredMaps.length) return;
+    
+    isLoading = true;
+    loadingSpinner.style.display = 'block';
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.textContent = 'Loading...';
+    
+    requestAnimationFrame(() => {
+        const previousCount = currentDisplayCount;
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = Math.min(currentDisplayCount + batchSize, filteredMaps.length);
+        
+        const fragment = document.createDocumentFragment();
+        for (let i = previousCount; i < currentDisplayCount; i++) {
+            const m = filteredMaps[i];
+            const card = createMapCard(m);
+            fragment.appendChild(card);
+        }
+        mapList.appendChild(fragment);
+        
+        updateLoadMoreButton();
+        isLoading = false;
+        loadingSpinner.style.display = 'none';
+    });
+}
+
+// Action functions
+function copyLink(link, button) {
+    navigator.clipboard.writeText(link).then(() => {
+        button.classList.add("copied");
+        button.textContent = "Copied!";
+        showPopup("Link copied!", false);
+        setTimeout(() => {
+            button.classList.remove("copied");
+            button.textContent = "Copy Link";
+        }, 1000);
+    }).catch(err => {
+        showPopup("Failed to copy link.", true);
+        console.error('Failed to copy link:', err);
+    });
+}
+
+async function copyRawData(link) {
+    try {
+        let rawContent = mapDataCache.get(link);
+        if (!rawContent) {
+            const rawLink = getRawUrl(link);
+            rawContent = await fetchMapData(rawLink);
+            if (rawContent) {
+                mapDataCache.set(rawLink, rawContent);
+            }
+        }
+        
+        if (rawContent) {
+            navigator.clipboard.writeText(rawContent).then(() => {
+                showPopup("Raw data copied!", false);
+            }).catch(() => {
+                showPopup("Failed to copy raw data.", true);
+            });
+        } else {
+            showPopup("Failed to fetch raw data.", true);
+        }
+    } catch (error) {
+        showPopup("Failed to copy raw data.", true);
+        console.error('Failed to fetch or copy raw data:', error);
+    }
+}
+
+function togglePatternsDropdown(button) {
+    if (button.classList.contains('no-click')) {
+        return;
+    }
+    
+    const dropdownMenu = button.nextElementSibling;
+    dropdownMenu.classList.toggle('show');
+    const allMenus = document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu');
+    allMenus.forEach(menu => {
+        if (menu !== dropdownMenu) {
+            menu.classList.remove('show');
+        }
+    });
+}
+
+function toggleActionDropdown(button) {
+    const dropdownMenu = button.nextElementSibling;
+    dropdownMenu.classList.toggle('show');
+    const allMenus = document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu');
+    allMenus.forEach(menu => {
+        if (menu !== dropdownMenu) {
+            menu.classList.remove('show');
+        }
+    });
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Event listeners
+let searchTimeout;
+searchBar.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = batchSize;
+        filterAndRenderMaps();
+    }, 300);
+});
+
+filterToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    filterMenu.classList.toggle('show');
+});
+
+document.addEventListener('click', (e) => {
+    if (!filterToggle.contains(e.target) && !filterMenu.contains(e.target)) {
+        filterMenu.classList.remove('show');
+    }
+});
+
+sortToggle.addEventListener('click', () => {
+    sortAscending = !sortAscending;
+    sortToggle.textContent = sortAscending ? "Sort: Easy → Hard" : "Sort: Hard → Easy";
+    const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+    currentDisplayCount = batchSize;
+    filterAndRenderMaps();
+});
+
+newMapsCheckbox.addEventListener('change', () => {
+    showNewMapsOnly = newMapsCheckbox.checked;
+    const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+    currentDisplayCount = batchSize;
+    filterAndRenderMaps();
+});
+
+[durationMinInput, durationMaxInput, notesMinInput, notesMaxInput].forEach(input => {
+    input.addEventListener('input', debounce(() => {
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = batchSize;
+        filterAndRenderMaps();
+    }, 300));
+});
+
+document.querySelectorAll('#difficulty-filters .filter-button').forEach(button => {
+    button.addEventListener('click', () => {
+        const difficulty = button.dataset.filter;
+        button.classList.toggle('active');
+        if (button.classList.contains('active')) {
+            if (!selectedDifficulties.includes(difficulty)) {
+                selectedDifficulties.push(difficulty);
+            }
+        } else {
+            selectedDifficulties = selectedDifficulties.filter(d => d !== difficulty);
+        }
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = batchSize;
+        filterAndRenderMaps();
+    });
+});
+
+document.querySelectorAll('#pattern-filters .filter-button').forEach(button => {
+    button.addEventListener('click', () => {
+        const pattern = button.dataset.filter;
+        button.classList.toggle('active');
+        if (button.classList.contains('active')) {
+            if (!selectedPatterns.includes(pattern)) {
+                selectedPatterns.push(pattern);
+            }
+        } else {
+            selectedPatterns = selectedPatterns.filter(p => p !== pattern);
+        }
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = batchSize;
+        filterAndRenderMaps();
+    });
+});
+
+document.querySelectorAll('input[name="apm-filter"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        apmFilter = radio.value;
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = batchSize;
+        filterAndRenderMaps();
+    });
+});
+
+document.querySelector('.clear-filters').addEventListener('click', () => {
+    selectedDifficulties = [];
+    selectedPatterns = [];
+    apmFilter = "all";
+    showNewMapsOnly = false;
+    document.querySelectorAll('.filter-button.active').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.getElementById('apm-all').checked = true;
+    newMapsCheckbox.checked = false;
+    durationMinInput.value = '';
+    durationMaxInput.value = '';
+    notesMinInput.value = '';
+    notesMaxInput.value = '';
+    const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+    currentDisplayCount = batchSize;
+    filterAndRenderMaps();
+});
+
+document.querySelector('.apply-filters').addEventListener('click', () => {
+    const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+    currentDisplayCount = batchSize;
+    filterAndRenderMaps();
+    filterMenu.classList.remove('show');
+});
+
+loadMoreBtn.addEventListener('click', () => {
+    if (!isLoading) {
+        loadMoreMaps();
+    }
+});
+
+// Scroll handling
+let scrollTimeout;
+function checkScroll() {
+    if (scrollTimeout) return;
+    
+    scrollTimeout = setTimeout(() => {
+        if (isLoading) {
+            scrollTimeout = null;
+            return;
+        }
+        
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        
+        if (scrollTop + windowHeight >= documentHeight - 200) {
+            loadMoreMaps();
+        }
+        scrollTimeout = null;
+    }, 100);
+}
+
+window.addEventListener('scroll', checkScroll, { passive: true });
+
+// Click outside handler for dropdowns
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('.patterns-dropdown-container') && !event.target.closest('.action-dropdown')) {
+        document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
+});
+
+// Memory management
+setInterval(() => {
+    if (mapDataCache.size > 1000) {
+        console.log('Clearing map data cache to free memory');
+        mapDataCache.clear();
+    }
+    if (starRatingCache.size > 500) {
+        console.log('Clearing star rating cache to free memory');
+        starRatingCache.clear();
+    }
+}, 300000);
+
+// Initialize on page load
+document.addEventListener("DOMContentLoaded", () => {
+    loadMapDataFromJSON();
+});
 </script>
 </body>
-</html>
