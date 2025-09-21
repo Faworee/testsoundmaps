@@ -268,7 +268,7 @@
                             difficulty: difficulty,
                             patterns: patterns,
                             isNew: isNew || false,
-                            starRating: starRating ? Math.ceil(parseFloat(starRating)) : null,
+                            starRating: starRating ? parseFloat(starRating) : null,
                             duration: stats.duration,
                             noteCount: stats.noteCount
                         };
@@ -2038,3 +2038,4 @@ h1 {
         width: 90%;
         padding: 15px;
     }}
+
