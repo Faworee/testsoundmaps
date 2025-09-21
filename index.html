@@ -10,7 +10,7 @@
 <meta property="og:url" content="https://faworee.github.io/SoundSpaceCustoms/">
 <meta property="og:type" content="website">
 
-<title>Sound Space Custom Maps - Enhanced with Star Ratings</title>
+<title>Sound Space Custom Maps - Instant Loading</title>
 <style>
 body {
     background-color: #0f0f0f;
@@ -472,48 +472,6 @@ h1 {
     border-color: #4facfe;
 }
 
-/* Star Rating Box */
-.star-rating-box {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(0, 0, 0, 0.85);
-    border: 2px solid #ffd700;
-    border-radius: 8px;
-    padding: 4px 8px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    z-index: 3;
-    font-size: 0.8em;
-    font-weight: bold;
-    color: #ffd700;
-    min-width: 50px;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
-}
-
-.low-quality .star-rating-box {
-    box-shadow: none;
-    border-radius: 5px;
-}
-
-.star-rating-box.calculating {
-    color: #ccc;
-    border-color: #666;
-}
-
-.star-rating-box.error {
-    color: #ff6b6b;
-    border-color: #ff6b6b;
-}
-
-.star-icon {
-    width: 12px;
-    height: 12px;
-    fill: currentColor;
-}
-
 .new-tag {
     position: absolute;
     top: 10px;
@@ -563,7 +521,7 @@ h1 {
     align-items: center;
     text-align: center;
     gap: 8px;
-    margin-top: 25px;
+    margin-top: 5px;
 }
 
 .map-artist {
@@ -606,51 +564,6 @@ h1 {
 .map-mapper, .map-difficulty {
     font-size: 0.8em;
     color: #ccc;
-}
-
-.map-stats {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin: 8px 0;
-}
-
-.map-stat-item {
-    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-    border: none;
-    border-radius: 25px; 
-    padding: 6px 12px; 
-    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    font-size: 0.85em;
-    color: white;
-}
-
-.low-quality .map-stat-item {
-    background: #1a1a1a;
-    box-shadow: none;
-    border-radius: 15px;
-    border: 1px solid rgba(79, 172, 254, 0.3);
-}
-
-.map-stat-item img {
-    height: 16px;
-    width: auto;
-    filter: drop-shadow(0 0 2px #fff);
-    vertical-align: middle;
-}
-
-.low-quality .map-stat-item img {
-    filter: none;
-}
-
-.map-stat-item span {
-    font-size: 1em;
-    color: #00f2fe;
 }
 
 .map-footer {
@@ -1026,14 +939,6 @@ h1 {
         top: 8px;
         right: -22px;
     }
-
-    .star-rating-box {
-        top: 8px;
-        left: 8px;
-        padding: 3px 6px;
-        font-size: 0.75em;
-        min-width: 45px;
-    }
 }
 </style>
 </head>
@@ -1080,26 +985,6 @@ h1 {
                         <button class="filter-button" data-filter="Spins">Spins</button>
                         <button class="filter-button" data-filter="Slides">Slides</button>
                         <button class="filter-button" data-filter="Vibros">Vibros</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="range-filters-container">
-                <div class="filter-section">
-                    <h3>Duration Filter</h3>
-                    <div class="textbox-group">
-                        <input type="text" id="duration-min" placeholder="0:00" class="filter-textbox">
-                        <span>-</span>
-                        <input type="text" id="duration-max" placeholder="5:00" class="filter-textbox">
-                    </div>
-                </div>
-                
-                <div class="filter-section">
-                    <h3>Notes Filter</h3>
-                    <div class="textbox-group">
-                        <input type="number" id="notes-min" placeholder="0" class="filter-textbox">
-                        <span>-</span>
-                        <input type="number" id="notes-max" placeholder="10000" class="filter-textbox">
                     </div>
                 </div>
             </div>
@@ -1155,94 +1040,6 @@ h1 {
 <div id="popup"></div>
 
 <script>
-// Rhythia API Integration
-class RhythiaAPIClient {
-    constructor() {
-        this.apiUrl = "https://development.rhythia.com/api/getRawStarRating";
-        this.requestQueue = [];
-        this.isProcessing = false;
-        this.rateLimitDelay = 500; // 500ms between requests to avoid rate limiting
-    }
-    
-    async calculateStarRating(rawMapData) {
-        if (!rawMapData || typeof rawMapData !== 'string') {
-            return { error: "Invalid map data" };
-        }
-        
-        return new Promise((resolve) => {
-            this.requestQueue.push({ rawMapData, resolve });
-            this.processQueue();
-        });
-    }
-    
-    async processQueue() {
-        if (this.isProcessing || this.requestQueue.length === 0) return;
-        
-        this.isProcessing = true;
-        
-        while (this.requestQueue.length > 0) {
-            const { rawMapData, resolve } = this.requestQueue.shift();
-            
-            try {
-                const result = await this.makeAPIRequest(rawMapData);
-                resolve(result);
-            } catch (error) {
-                resolve({ error: error.message });
-            }
-            
-            // Rate limiting delay
-            if (this.requestQueue.length > 0) {
-                await new Promise(resolve => setTimeout(resolve, this.rateLimitDelay));
-            }
-        }
-        
-        this.isProcessing = false;
-    }
-    
-    async makeAPIRequest(rawMapData) {
-        const payload = {
-            rawMap: rawMapData,
-            session: ""
-        };
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-        
-        try {
-            const response = await fetch(this.apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            const beatmap = data.beatmap || {};
-            const starRating = parseFloat(beatmap.starRating) || 0.0;
-            
-            return {
-                starRating: parseFloat(starRating.toFixed(2)),
-                rp: beatmap.rp || {}
-            };
-            
-        } catch (error) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                throw new Error('Request timeout');
-            }
-            throw error;
-        }
-    }
-}
-
 // Global variables
 let isLowQualityMode = false;
 const difficultyOrder = ["Easy", "Medium", "Hard", "Logic", "Brrrr", "Tasukete"];
@@ -1253,13 +1050,12 @@ let selectedDifficulties = [];
 let selectedPatterns = [];
 let apmFilter = "all";
 let showNewMapsOnly = false;
-let currentDisplayCount = 30; // Start with 30 maps in high quality mode
-const LOAD_BATCH_SIZE = 20; // Smaller batch size for better performance
+let currentDisplayCount = 50; // Show more maps initially for instant loading
+const LOAD_BATCH_SIZE = 30;
 let isLoading = false;
 
+// Simple cache for raw map data
 const mapDataCache = new Map();
-const starRatingCache = new Map();
-const rhythiaAPI = new RhythiaAPIClient();
 
 // DOM elements
 const searchBar = document.getElementById('search-bar');
@@ -1274,81 +1070,7 @@ const scrollIndicator = document.getElementById('scroll-indicator');
 const performanceToggle = document.getElementById('performance-toggle');
 
 // Filter inputs
-const durationMinInput = document.getElementById('duration-min');
-const durationMaxInput = document.getElementById('duration-max');
-const notesMinInput = document.getElementById('notes-min');
-const notesMaxInput = document.getElementById('notes-max');
 const newMapsCheckbox = document.getElementById('new-maps-only');
-
-// Star rating functions
-async function calculateStarRating(rawData) {
-    if (!rawData || typeof rawData !== 'string') return null;
-    
-    if (starRatingCache.has(rawData)) {
-        return starRatingCache.get(rawData);
-    }
-    
-    try {
-        const result = await rhythiaAPI.calculateStarRating(rawData);
-        
-        if (result.error) {
-            console.warn('Rhythia API error:', result.error);
-            return null;
-        }
-        
-        const starRating = result.starRating || 0;
-        starRatingCache.set(rawData, starRating);
-        return starRating;
-    } catch (error) {
-        console.error('Star rating calculation failed:', error);
-        return null;
-    }
-}
-
-function createStarRatingBox(starRating) {
-    const box = document.createElement('div');
-    box.className = 'star-rating-box';
-    
-    if (starRating === null) {
-        box.classList.add('calculating');
-        box.innerHTML = `
-            <span>...</span>
-            <svg class="star-icon" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-        `;
-    } else {
-        box.innerHTML = `
-            <span>${starRating}</span>
-            <svg class="star-icon" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-        `;
-    }
-    
-    return box;
-}
-
-function updateStarRatingBox(box, starRating) {
-    if (starRating === null) {
-        box.classList.remove('calculating');
-        box.classList.add('error');
-        box.innerHTML = `
-            <span>ERR</span>
-            <svg class="star-icon" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-        `;
-    } else {
-        box.classList.remove('calculating', 'error');
-        box.innerHTML = `
-            <span>${starRating}</span>
-            <svg class="star-icon" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-        `;
-    }
-}
 
 // Performance toggle
 performanceToggle.addEventListener('click', () => {
@@ -1361,13 +1083,6 @@ performanceToggle.addEventListener('click', () => {
         localStorage.setItem('soundSpaceLowQuality', isLowQualityMode.toString());
     } catch (e) {
         console.warn('Could not save performance preference:', e);
-    }
-    
-    // Adjust display count based on mode
-    if (isLowQualityMode) {
-        currentDisplayCount = filteredMaps.length; // Show all maps
-    } else {
-        currentDisplayCount = Math.min(30, filteredMaps.length); // Reset to 30 for high quality
     }
     
     if (maps.length > 0) {
@@ -1386,49 +1101,6 @@ try {
 }
 
 // Utility functions
-function parseMapData(rawData) {
-    if (!rawData || typeof rawData !== 'string') {
-        return { duration: 0, noteCount: 0 };
-    }
-    
-    const firstCommaIndex = rawData.indexOf(',');
-    if (firstCommaIndex === -1) {
-        return { duration: 0, noteCount: 0 };
-    }
-    
-    const notesData = rawData.substring(firstCommaIndex + 1);
-    const noteArray = notesData.split(',');
-    const noteCount = noteArray.length;
-    
-    if (noteCount === 0) {
-        return { duration: 0, noteCount: 0 };
-    }
-    
-    try {
-        const firstNote = noteArray[0];
-        const firstNoteParts = firstNote.split('|');
-        const startTime = parseFloat(firstNoteParts[2]) || 0;
-        
-        const lastNote = noteArray[noteArray.length - 1];
-        const lastNoteParts = lastNote.split('|');
-        const endTime = parseFloat(lastNoteParts[2]) || 0;
-        
-        const durationMilliseconds = endTime - startTime;
-        return { duration: Math.max(0, durationMilliseconds), noteCount: noteCount };
-    } catch (error) {
-        console.warn('Error parsing map data:', error);
-        return { duration: 0, noteCount: noteCount };
-    }
-}
-
-function formatDuration(milliseconds) {
-    if (milliseconds <= 0 || isNaN(milliseconds)) return "--:--";
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
 function getRawUrl(url) {
     if (url.includes('github.com')) {
         let newUrl = url.replace('github.com', 'raw.githubusercontent.com');
@@ -1443,7 +1115,7 @@ function getRawUrl(url) {
 
 async function fetchMapData(url) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     
     try {
         const response = await fetch(url, {
@@ -1458,16 +1130,11 @@ async function fetchMapData(url) {
         return await response.text();
     } catch (error) {
         clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-            console.warn("Fetch timeout for:", url);
-        } else {
-            console.error("Error fetching map data:", error);
-        }
         return null;
     }
 }
 
-// Main data loading function
+// Main data loading function - INSTANT LOADING
 async function loadMapDataFromJSON() {
     try {
         loadingSpinner.style.display = 'block';
@@ -1490,72 +1157,35 @@ async function loadMapDataFromJSON() {
             throw new Error('Invalid JSON format: Expected an array of maps');
         }
         
-        // Process maps differently based on quality mode
-        if (isLowQualityMode) {
-            // Low quality mode: Load all maps but with minimal processing
-            maps = mapData.map(mapArray => {
-                if (!Array.isArray(mapArray) || mapArray.length < 6) {
-                    console.warn('Invalid map data format:', mapArray);
-                    return null;
-                }
-                
-                const [link, mapName, artist, mapper, difficulty, patterns, isNew] = mapArray;
-                
-                return {
-                    link: link,
-                    mapName: mapName,
-                    artist: artist,
-                    mapper: mapper,
-                    difficulty: difficulty,
-                    patterns: patterns,
-                    isNew: isNew || false,
-                    duration: undefined,
-                    noteCount: undefined,
-                    starRating: null
-                };
-            }).filter(map => map !== null);
+        // INSTANT LOADING: Create all map objects immediately without any async processing
+        maps = mapData.map(mapArray => {
+            if (!Array.isArray(mapArray) || mapArray.length < 6) {
+                console.warn('Invalid map data format:', mapArray);
+                return null;
+            }
             
-            currentDisplayCount = maps.length; // Show all maps in low quality
-        } else {
-            // High quality mode: Load maps with full processing in smaller batches
-            const INITIAL_BATCH_SIZE = 30;
-            const initialBatch = mapData.slice(0, INITIAL_BATCH_SIZE);
+            const [link, mapName, artist, mapper, difficulty, patterns, isNew] = mapArray;
             
-            // Store all raw map data for later processing
-            const allMapsBasic = mapData.map(mapArray => {
-                if (!Array.isArray(mapArray) || mapArray.length < 6) {
-                    return null;
-                }
-                
-                const [link, mapName, artist, mapper, difficulty, patterns, isNew] = mapArray;
-                
-                return {
-                    link: link,
-                    mapName: mapName,
-                    artist: artist,
-                    mapper: mapper,
-                    difficulty: difficulty,
-                    patterns: patterns,
-                    isNew: isNew || false,
-                    duration: undefined,
-                    noteCount: undefined,
-                    starRating: null
-                };
-            }).filter(map => map !== null);
-            
-            maps = allMapsBasic;
-            currentDisplayCount = INITIAL_BATCH_SIZE;
-            
-            // Process initial batch with full stats
-            await processMapBatch(0, INITIAL_BATCH_SIZE);
-        }
+            return {
+                link: link,
+                mapName: mapName,
+                artist: artist,
+                mapper: mapper,
+                difficulty: difficulty,
+                patterns: patterns || [],
+                isNew: isNew || false
+            };
+        }).filter(map => map !== null);
         
         if (maps.length === 0) {
             throw new Error('No valid map data found');
         }
         
-        console.log(`Loaded ${maps.length} maps from JSON file`);
+        console.log(`Loaded ${maps.length} maps instantly!`);
+        
+        // Show maps immediately
         filterAndRenderMaps();
+        loadingSpinner.style.display = 'none';
         
     } catch (error) {
         console.error('Error loading map data:', error);
@@ -1571,53 +1201,7 @@ async function loadMapDataFromJSON() {
     }
 }
 
-// Process a batch of maps with full stats
-async function processMapBatch(startIndex, endIndex) {
-    if (isLowQualityMode) return; // Skip processing in low quality mode
-    
-    const batchMaps = maps.slice(startIndex, endIndex);
-    const MINI_BATCH_SIZE = 5; // Process in even smaller chunks to avoid blocking
-    
-    for (let i = 0; i < batchMaps.length; i += MINI_BATCH_SIZE) {
-        const miniBatch = batchMaps.slice(i, i + MINI_BATCH_SIZE);
-        const promises = miniBatch.map(async (mapObj, index) => {
-            const actualIndex = startIndex + i + index;
-            
-            const rawLink = getRawUrl(mapObj.link);
-            
-            try {
-                let rawData = mapDataCache.get(rawLink);
-                if (!rawData) {
-                    rawData = await fetchMapData(rawLink);
-                    if (rawData) {
-                        mapDataCache.set(rawLink, rawData);
-                    }
-                }
-                
-                if (rawData) {
-                    const stats = parseMapData(rawData);
-                    maps[actualIndex].duration = stats.duration;
-                    maps[actualIndex].noteCount = stats.noteCount;
-                    
-                    // Calculate star rating using Rhythia API
-                    const starRating = await calculateStarRating(rawData);
-                    maps[actualIndex].starRating = starRating;
-                }
-            } catch (error) {
-                console.error("Error processing map:", rawLink, error);
-            }
-        });
-        
-        await Promise.all(promises);
-        
-        // Small delay between mini-batches to prevent blocking
-        if (i + MINI_BATCH_SIZE < batchMaps.length) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-    }
-}
-
-// Map card creation
+// Simplified map card creation (no async operations)
 function createMapCard(m) {
     const card = document.createElement('div');
     card.classList.add('map-card');
@@ -1627,28 +1211,9 @@ function createMapCard(m) {
     }
     card.classList.add(mapDifficulty);
     
-    // Create star rating box
-    const starRatingBox = createStarRatingBox(m.starRating);
-    
     let newTagHtml = '';
     if (m.isNew) {
         newTagHtml = '<div class="new-tag">NEW</div>';
-    }
-    
-    let mapStatsHtml = '';
-    if (!isLowQualityMode || (m.duration !== undefined && m.noteCount !== undefined)) {
-        mapStatsHtml = `
-            <div class="map-stats">
-                <div class="map-stat-item">
-                    <img src="https://i.imgur.com/lv0ynEi.png" alt="Timer Icon">
-                    <span>${m.duration !== undefined ? formatDuration(m.duration) : '--:--'}</span>
-                </div>
-                <div class="map-stat-item">
-                    <img src="https://i.imgur.com/7pfvgCl.png" alt="Notes Icon">
-                    <span>${m.noteCount !== undefined ? m.noteCount.toLocaleString() : '----'}</span>
-                </div>
-            </div>
-        `;
     }
     
     let patternsHtml = '';
@@ -1681,7 +1246,6 @@ function createMapCard(m) {
             <div class="map-name"><a href="${m.link}" target="_blank" rel="noopener">${m.mapName}</a></div>
             <div class="map-mapper">Mapped by: ${m.mapper}</div>
             <div class="map-difficulty">Difficulty: ${m.difficulty}</div>
-            ${mapStatsHtml}
         </div>
         <div class="map-footer">
             ${patternsHtml}
@@ -1697,55 +1261,7 @@ function createMapCard(m) {
         </div>
     `;
     
-    // Add star rating box
-    card.appendChild(starRatingBox);
-    
-    // Calculate star rating if not available and not in low quality mode
-    if (m.starRating === null && !isLowQualityMode) {
-        calculateStarRatingAsync(m.link, starRatingBox);
-    }
-    
     return card;
-}
-
-async function calculateStarRatingAsync(link, starRatingBox) {
-    try {
-        const rawLink = getRawUrl(link);
-        let rawData = mapDataCache.get(rawLink);
-        
-        if (!rawData) {
-            rawData = await fetchMapData(rawLink);
-            if (rawData) {
-                mapDataCache.set(rawLink, rawData);
-            }
-        }
-
-        if (rawData) {
-            const starRating = await calculateStarRating(rawData);
-            updateStarRatingBox(starRatingBox, starRating);
-        } else {
-            updateStarRatingBox(starRatingBox, null);
-        }
-    } catch (error) {
-        console.error('Error calculating star rating:', error);
-        updateStarRatingBox(starRatingBox, null);
-    }
-}
-
-// Event listeners and utility functions
-function parseTimeToMilliseconds(timeString) {
-    if (!timeString || timeString === "") return null;
-    const parts = timeString.split(':');
-    if (parts.length !== 2) return null;
-    const mins = parseInt(parts[0]) || 0;
-    const secs = parseInt(parts[1]) || 0;
-    return (mins * 60 + secs) * 1000;
-}
-
-function matchesRangeFilter(value, minInput, maxInput) {
-    const minVal = minInput === null ? -Infinity : minInput;
-    const maxVal = maxInput === null ? Infinity : maxInput;
-    return value >= minVal && value <= maxVal;
 }
 
 function isApmMap(artist) {
@@ -1765,11 +1281,6 @@ function showPopup(message, isError = false) {
 function filterAndRenderMaps() {
     const searchText = searchBar.value.toLowerCase();
     
-    const durationMin = parseTimeToMilliseconds(durationMinInput.value);
-    const durationMax = parseTimeToMilliseconds(durationMaxInput.value);
-    const notesMin = notesMinInput.value ? parseInt(notesMinInput.value) : null;
-    const notesMax = notesMaxInput.value ? parseInt(notesMaxInput.value) : null;
-    
     filteredMaps = maps.filter(m => {
         const matchesSearch = m.mapName.toLowerCase().includes(searchText) || 
                             m.artist.toLowerCase().includes(searchText) || 
@@ -1785,12 +1296,9 @@ function filterAndRenderMaps() {
             matchesApm = !isApm;
         }
 
-        const matchesDuration = matchesRangeFilter(m.duration || 0, durationMin, durationMax);
-        const matchesNotes = matchesRangeFilter(m.noteCount || 0, notesMin, notesMax);
         const matchesNewFilter = !showNewMapsOnly || m.isNew;
 
-        return matchesSearch && matchesDifficulty && matchesPatterns && matchesApm && 
-               matchesDuration && matchesNotes && matchesNewFilter;
+        return matchesSearch && matchesDifficulty && matchesPatterns && matchesApm && matchesNewFilter;
     });
 
     filteredMaps.sort((a, b) => {
@@ -1823,20 +1331,37 @@ function renderMaps() {
     mapList.innerHTML = "";
     const itemsToShow = Math.min(filteredMaps.length, currentDisplayCount);
     const fragment = document.createDocumentFragment();
-    for (let i = 0; i < itemsToShow; i++) {
-        const m = filteredMaps[i];
-        const card = createMapCard(m);
-        fragment.appendChild(card);
+    
+    // Render in batches to avoid blocking
+    const RENDER_BATCH_SIZE = 20;
+    let renderIndex = 0;
+    
+    function renderBatch() {
+        const batchEnd = Math.min(renderIndex + RENDER_BATCH_SIZE, itemsToShow);
+        
+        for (let i = renderIndex; i < batchEnd; i++) {
+            const m = filteredMaps[i];
+            const card = createMapCard(m);
+            fragment.appendChild(card);
+        }
+        
+        renderIndex = batchEnd;
+        
+        if (renderIndex < itemsToShow) {
+            requestAnimationFrame(renderBatch);
+        } else {
+            mapList.appendChild(fragment);
+            updateLoadMoreButton();
+        }
     }
-    mapList.appendChild(fragment);
-    updateLoadMoreButton();
-    loadingSpinner.style.display = 'none';
+    
+    renderBatch();
 }
 
 function updateLoadMoreButton() {
     const remainingMaps = filteredMaps.length - currentDisplayCount;
     
-    if (remainingMaps <= 0 || isLowQualityMode) {
+    if (remainingMaps <= 0) {
         loadMoreBtn.style.display = 'none';
         scrollIndicator.textContent = `All ${filteredMaps.length} maps loaded`;
     } else {
@@ -1852,22 +1377,12 @@ function loadMoreMaps() {
     if (isLoading || currentDisplayCount >= filteredMaps.length) return;
     
     isLoading = true;
-    loadingSpinner.style.display = 'block';
     loadMoreBtn.disabled = true;
     loadMoreBtn.textContent = 'Loading...';
     
-    requestAnimationFrame(async () => {
+    requestAnimationFrame(() => {
         const previousCount = currentDisplayCount;
-        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-        const newDisplayCount = Math.min(currentDisplayCount + batchSize, filteredMaps.length);
-        
-        // In high quality mode, process the new maps if they haven't been processed yet
-        if (!isLowQualityMode && newDisplayCount > maps.filter(m => m.duration !== undefined).length) {
-            const startIndex = Math.max(0, currentDisplayCount);
-            const endIndex = Math.min(newDisplayCount, maps.length);
-            await processMapBatch(startIndex, endIndex);
-        }
-        
+        const newDisplayCount = Math.min(currentDisplayCount + LOAD_BATCH_SIZE, filteredMaps.length);
         currentDisplayCount = newDisplayCount;
         
         const fragment = document.createDocumentFragment();
@@ -1880,7 +1395,6 @@ function loadMoreMaps() {
         
         updateLoadMoreButton();
         isLoading = false;
-        loadingSpinner.style.display = 'none';
     });
 }
 
@@ -1969,7 +1483,7 @@ let searchTimeout;
 searchBar.addEventListener('input', () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-        currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
+        currentDisplayCount = 50;
         filterAndRenderMaps();
     }, 300);
 });
@@ -1988,21 +1502,14 @@ document.addEventListener('click', (e) => {
 sortToggle.addEventListener('click', () => {
     sortAscending = !sortAscending;
     sortToggle.textContent = sortAscending ? "Sort: Easy → Hard" : "Sort: Hard → Easy";
-    currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
+    currentDisplayCount = 50;
     filterAndRenderMaps();
 });
 
 newMapsCheckbox.addEventListener('change', () => {
     showNewMapsOnly = newMapsCheckbox.checked;
-    currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
+    currentDisplayCount = 50;
     filterAndRenderMaps();
-});
-
-[durationMinInput, durationMaxInput, notesMinInput, notesMaxInput].forEach(input => {
-    input.addEventListener('input', debounce(() => {
-        currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
-        filterAndRenderMaps();
-    }, 300));
 });
 
 document.querySelectorAll('#difficulty-filters .filter-button').forEach(button => {
@@ -2016,7 +1523,7 @@ document.querySelectorAll('#difficulty-filters .filter-button').forEach(button =
         } else {
             selectedDifficulties = selectedDifficulties.filter(d => d !== difficulty);
         }
-        currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
+        currentDisplayCount = 50;
         filterAndRenderMaps();
     });
 });
@@ -2032,7 +1539,7 @@ document.querySelectorAll('#pattern-filters .filter-button').forEach(button => {
         } else {
             selectedPatterns = selectedPatterns.filter(p => p !== pattern);
         }
-        currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
+        currentDisplayCount = 50;
         filterAndRenderMaps();
     });
 });
@@ -2040,7 +1547,7 @@ document.querySelectorAll('#pattern-filters .filter-button').forEach(button => {
 document.querySelectorAll('input[name="apm-filter"]').forEach(radio => {
     radio.addEventListener('change', () => {
         apmFilter = radio.value;
-        currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
+        currentDisplayCount = 50;
         filterAndRenderMaps();
     });
 });
@@ -2055,16 +1562,12 @@ document.querySelector('.clear-filters').addEventListener('click', () => {
     });
     document.getElementById('apm-all').checked = true;
     newMapsCheckbox.checked = false;
-    durationMinInput.value = '';
-    durationMaxInput.value = '';
-    notesMinInput.value = '';
-    notesMaxInput.value = '';
-    currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
+    currentDisplayCount = 50;
     filterAndRenderMaps();
 });
 
 document.querySelector('.apply-filters').addEventListener('click', () => {
-    currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
+    currentDisplayCount = 50;
     filterAndRenderMaps();
     filterMenu.classList.remove('show');
 });
@@ -2107,18 +1610,6 @@ document.addEventListener('click', (event) => {
         });
     }
 });
-
-// Memory management
-setInterval(() => {
-    if (mapDataCache.size > 1000) {
-        console.log('Clearing map data cache to free memory');
-        mapDataCache.clear();
-    }
-    if (starRatingCache.size > 500) {
-        console.log('Clearing star rating cache to free memory');
-        starRatingCache.clear();
-    }
-}, 300000);
 
 // Initialize on page load
 document.addEventListener("DOMContentLoaded", () => {
