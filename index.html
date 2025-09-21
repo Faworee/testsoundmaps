@@ -185,8 +185,16 @@
             return '<span class="star-rating loading">Loading...</span>';
         }
         
-        const formattedRating = parseFloat(starRating).toFixed(2);
-        return `<span class="star-rating">★ ${formattedRating}</span>`;
+        // Debug log to see what we're getting
+        console.log('Star rating value:', starRating, 'Type:', typeof starRating);
+        
+        // Ensure we have a number and format it properly
+        const numRating = parseFloat(starRating);
+        if (isNaN(numRating)) {
+            return '<span class="star-rating">★ 0.00</span>';
+        }
+        
+        return `<span class="star-rating">★ ${numRating.toFixed(2)}</span>`;
     }
 
     async function loadMapDataFromJSON() {
@@ -274,7 +282,7 @@
                             difficulty: difficulty,
                             patterns: patterns,
                             isNew: isNew || false,
-                            starRating: starRating,
+                            starRating: starRating ? Math.ceil(parseFloat(starRating)) : null,
                             duration: undefined,
                             noteCount: undefined
                         };
@@ -1427,15 +1435,15 @@ h1 {
     color: #ffd700;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 8px;
-    flex-wrap: nowrap;
     width: 100%;
+    position: relative;
 }
 
 .star-rating {
-    flex: 0 0 auto;
-    text-align: left;
+    position: absolute;
+    left: 0;
     font-size: 0.8em;
     font-weight: bold;
     background: linear-gradient(45deg, #ffd700, #ffed4a);
@@ -1443,17 +1451,14 @@ h1 {
     -webkit-text-fill-color: transparent;
     background-clip: text;
     white-space: nowrap;
-    min-width: fit-content;
-    order: -1;
 }
 
 .artist-name {
-    flex: 1;
     text-align: center;
-    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    margin: 0 60px;
 }
 
 .low-quality .star-rating {
@@ -1944,4 +1949,3 @@ h1 {
         width: 90%;
         padding: 15px;
     }}
-
