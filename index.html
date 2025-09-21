@@ -175,15 +175,15 @@
 
     function createStarRating(starRating) {
         if (starRating === null || starRating === undefined) {
-            return '<span class="star-rating loading">Loading...</span>';
+            return '<span class="rating loading">Loading...</span>';
         }
         
         const numRating = parseFloat(starRating);
         if (isNaN(numRating)) {
-            return '<span class="star-rating">★ 0.00</span>';
+            return '<span class="rating">★ 0.00</span>';
         }
         
-        return `<span class="star-rating">★ ${numRating.toFixed(2)}</span>`;
+        return `<span class="rating">★ ${numRating.toFixed(2)}</span>`;
     }
 
     async function loadMapDataFromJSON() {
@@ -1441,25 +1441,25 @@ h1 {
     position: relative;
 }
 
-.star-rating {
+.rating {
     position: absolute;
     left: 0;
     font-size: 0.8em;
     font-weight: bold;
     color: #00f2fe;
-    -webkit-text-stroke: 0.1px black;
+    -webkit-text-stroke: 0.25px black;
     white-space: nowrap;
     padding: 4px 8px;
 }
 
-.star-rating::before {
+.rating::before {
     content: '';
     position: absolute;
     top: -2px;
     left: -2px;
     right: -2px;
     bottom: -2px;
-    background: linear-gradient(135deg, #ffd700, #ffed4a, #ffd700);
+    background: #696969
     border-radius: 12px;
     border: 2px solid transparent;
     z-index: -1;
@@ -1974,6 +1974,7 @@ h1 {
         padding: 15px;
     }
 }
+
 
 
 
