@@ -1,6 +1,3 @@
-
-</style>
-</head>
 <body>
 
 <div class="header-container">
@@ -162,9 +159,7 @@
         
         try {
             localStorage.setItem('soundSpaceLowQuality', isLowQualityMode.toString());
-        } catch (e) {
-            console.warn('Could not save performance preference:', e);
-        }
+        } catch (e) {}
         
         if (maps.length > 0) {
             renderMaps();
@@ -176,19 +171,13 @@
         if (savedPreference === 'true') {
             performanceToggle.click();
         }
-    } catch (e) {
-        console.warn('Could not load performance preference:', e);
-    }
+    } catch (e) {}
 
     function createStarRating(starRating) {
         if (starRating === null || starRating === undefined) {
             return '<span class="star-rating loading">Loading...</span>';
         }
         
-        // Debug log to see what we're getting
-        console.log('Star rating value:', starRating, 'Type:', typeof starRating);
-        
-        // Ensure we have a number and format it properly
         const numRating = parseFloat(starRating);
         if (isNaN(numRating)) {
             return '<span class="star-rating">★ 0.00</span>';
@@ -218,96 +207,37 @@
             if (!Array.isArray(mapData)) {
                 throw new Error('Invalid JSON format: Expected an array of maps');
             }
-            
-            const BATCH_SIZE = isLowQualityMode ? 20 : 10;
-            const mapsWithStats = [];
-            
-            for (let i = 0; i < mapData.length; i += BATCH_SIZE) {
-                const batch = mapData.slice(i, i + BATCH_SIZE);
-                const batchPromises = batch.map(async (mapArray) => {
-                    if (!Array.isArray(mapArray) || mapArray.length < 7) {
-                        console.warn('Invalid map data format:', mapArray);
-                        return null;
-                    }
-                    
-                    const [link, mapName, artist, mapper, difficulty, patterns, isNew, starRating] = mapArray;
-                    
-                    if (isLowQualityMode) {
-                        return {
-                            link: link,
-                            mapName: mapName,
-                            artist: artist,
-                            mapper: mapper,
-                            difficulty: difficulty,
-                            patterns: patterns,
-                            isNew: isNew || false,
-                            starRating: starRating ? parseFloat(starRating) : null,
-                            duration: undefined,
-                            noteCount: undefined
-                        };
-                    }
-                    
-                    const rawLink = getRawUrl(link);
-                    
-                    try {
-                        let rawData = mapDataCache.get(rawLink);
-                        if (!rawData) {
-                            rawData = await fetchMapData(rawLink);
-                            if (rawData) {
-                                mapDataCache.set(rawLink, rawData);
-                            }
-                        }
-                        
-                        const stats = rawData ? parseMapData(rawData) : { duration: undefined, noteCount: undefined };
-                        
-                        return {
-                            link: link,
-                            mapName: mapName,
-                            artist: artist,
-                            mapper: mapper,
-                            difficulty: difficulty,
-                            patterns: patterns,
-                            isNew: isNew || false,
-                            starRating: starRating ? parseFloat(starRating) : null,
-                            duration: stats.duration,
-                            noteCount: stats.noteCount
-                        };
-                    } catch (error) {
-                        console.error("Error fetching map data for link:", rawLink, error);
-                        return {
-                            link: link,
-                            mapName: mapName,
-                            artist: artist,
-                            mapper: mapper,
-                            difficulty: difficulty,
-                            patterns: patterns,
-                            isNew: isNew || false,
-                            starRating: starRating ? Math.ceil(parseFloat(starRating)) : null,
-                            duration: undefined,
-                            noteCount: undefined
-                        };
-                    }
-                });
-                
-                const batchResults = await Promise.all(batchPromises);
-                mapsWithStats.push(...batchResults);
-                
-                if (i + BATCH_SIZE < mapData.length) {
-                    await new Promise(resolve => setTimeout(resolve, isLowQualityMode ? 50 : 100));
+
+            maps = mapData.map(mapArray => {
+                if (!Array.isArray(mapArray) || mapArray.length < 7) {
+                    return null;
                 }
-            }
-            
-            maps = mapsWithStats.filter(map => map !== null);
+                
+                const [link, mapName, artist, mapper, difficulty, patterns, isNew, starRating] = mapArray;
+                
+                return {
+                    link: link,
+                    mapName: mapName,
+                    artist: artist,
+                    mapper: mapper,
+                    difficulty: difficulty,
+                    patterns: patterns,
+                    isNew: isNew || false,
+                    starRating: starRating ? parseFloat(starRating) : null,
+                    duration: undefined,
+                    noteCount: undefined,
+                    statsLoaded: false
+                };
+            }).filter(map => map !== null);
             
             if (maps.length === 0) {
                 throw new Error('No valid map data found');
             }
             
-            console.log(`Loaded ${maps.length} maps from JSON file with star ratings!`);
             filterAndRenderMaps();
+            loadStatsForVisibleMaps();
             
         } catch (error) {
-            console.error('Error loading map data:', error);
             loadingSpinner.style.display = 'none';
             mapList.innerHTML = `
                 <div class="error-message">
@@ -324,6 +254,56 @@
                 </div>
             `;
         }
+    }
+
+    async function loadStatsForVisibleMaps() {
+        if (isLowQualityMode) return;
+        
+        const visibleMaps = filteredMaps.slice(0, currentDisplayCount).filter(map => !map.statsLoaded);
+        
+        for (const map of visibleMaps) {
+            const rawLink = getRawUrl(map.link);
+            
+            try {
+                let rawData = mapDataCache.get(rawLink);
+                if (!rawData) {
+                    rawData = await fetchMapData(rawLink);
+                    if (rawData) {
+                        mapDataCache.set(rawLink, rawData);
+                    }
+                }
+                
+                if (rawData) {
+                    const stats = parseMapData(rawData);
+                    map.duration = stats.duration;
+                    map.noteCount = stats.noteCount;
+                    map.statsLoaded = true;
+                    updateMapCard(map);
+                }
+            } catch (error) {}
+        }
+    }
+
+    function updateMapCard(map) {
+        const cards = document.querySelectorAll('.map-card');
+        cards.forEach(card => {
+            const link = card.querySelector('.map-name a').href;
+            if (link === map.link) {
+                const statsElement = card.querySelector('.map-stats');
+                if (statsElement && map.duration !== undefined && map.noteCount !== undefined) {
+                    statsElement.innerHTML = `
+                        <div class="map-stat-item">
+                            <img src="https://i.imgur.com/lv0ynEi.png" alt="Timer Icon">
+                            <span>${formatDuration(map.duration)}</span>
+                        </div>
+                        <div class="map-stat-item">
+                            <img src="https://i.imgur.com/7pfvgCl.png" alt="Notes Icon">
+                            <span>${map.noteCount.toLocaleString()}</span>
+                        </div>
+                    `;
+                }
+            }
+        });
     }
 
     function parseMapData(rawData) {
@@ -356,7 +336,6 @@
             const durationMilliseconds = endTime - startTime;
             return { duration: Math.max(0, durationMilliseconds), noteCount: noteCount };
         } catch (error) {
-            console.warn('Error parsing map data:', error);
             return { duration: 0, noteCount: noteCount };
         }
     }
@@ -401,11 +380,6 @@
             return await response.text();
         } catch (error) {
             clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                console.warn("Fetch timeout for:", url);
-            } else {
-                console.error("Error fetching map data:", error);
-            }
             return null;
         }
     }
@@ -455,6 +429,7 @@
             updateLoadMoreButton();
             isLoading = false;
             loadingSpinner.style.display = 'none';
+            loadStatsForVisibleMaps();
         });
     }
 
@@ -674,6 +649,14 @@
             if (a.isNew !== b.isNew) {
                 return a.isNew ? -1 : 1;
             }
+            
+            const starA = a.starRating || 0;
+            const starB = b.starRating || 0;
+            const starComparison = starB - starA;
+            if (starComparison !== 0) {
+                return starComparison;
+            }
+            
             const artistComparison = a.artist.localeCompare(b.artist);
             if (artistComparison !== 0) {
                 return artistComparison;
@@ -700,6 +683,9 @@
         mapList.appendChild(fragment);
         updateLoadMoreButton();
         loadingSpinner.style.display = 'none';
+        if (!isLowQualityMode) {
+            setTimeout(() => loadStatsForVisibleMaps(), 100);
+        }
     }
 
     function createMapCard(m) {
@@ -717,20 +703,35 @@
         }
 
         let mapStatsHtml = '';
-        if (!isLowQualityMode || (m.duration !== undefined && m.noteCount !== undefined)) {
-            mapStatsHtml = `
-                <div class="map-stats">
-                    <div class="map-stat-item">
-                        <img src="https://i.imgur.com/lv0ynEi.png" alt="Timer Icon">
-                        <span>${m.duration !== undefined ? formatDuration(m.duration) : '--:--'}</span>
+        if (!isLowQualityMode) {
+            if (m.duration !== undefined && m.noteCount !== undefined) {
+                mapStatsHtml = `
+                    <div class="map-stats">
+                        <div class="map-stat-item">
+                            <img src="https://i.imgur.com/lv0ynEi.png" alt="Timer Icon">
+                            <span>${formatDuration(m.duration)}</span>
+                        </div>
+                        <div class="map-stat-item">
+                            <img src="https://i.imgur.com/7pfvgCl.png" alt="Notes Icon">
+                            <span>${m.noteCount.toLocaleString()}</span>
+                        </div>
                     </div>
-                    <div class="map-stat-item">
-                        <img src="https://i.imgur.com/7pfvgCl.png" alt="Notes Icon">
-                        <span>${m.noteCount !== undefined ? m.noteCount.toLocaleString() : '----'}</span>
+                `;
+            } else {
+                mapStatsHtml = `
+                    <div class="map-stats">
+                        <div class="map-stat-item">
+                            <img src="https://i.imgur.com/lv0ynEi.png" alt="Timer Icon">
+                            <span>--:--</span>
+                        </div>
+                        <div class="map-stat-item">
+                            <img src="https://i.imgur.com/7pfvgCl.png" alt="Notes Icon">
+                            <span>----</span>
+                        </div>
                     </div>
-                </div>
-            `;
-        } else if (isLowQualityMode) {
+                `;
+            }
+        } else {
             mapStatsHtml = `
                 <div class="map-stats">
                     <div class="map-stat-item">
@@ -806,7 +807,6 @@
             }, 1000);
         }).catch(err => {
             showPopup("Failed to copy link.", true);
-            console.error('Failed to copy link:', err);
         });
     }
 
@@ -832,7 +832,6 @@
             }
         } catch (error) {
             showPopup("Failed to copy raw data.", true);
-            console.error('Failed to fetch or copy raw data:', error);
         }
     }
 
@@ -872,7 +871,6 @@
 
     setInterval(() => {
         if (mapDataCache.size > 1000) {
-            console.log('Clearing map data cache to free memory');
             mapDataCache.clear();
         }
     }, 300000); 
@@ -882,7 +880,8 @@
     });
 </script>
 </body>
-</html><!DOCTYPE html>
+</html>
+        <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -896,8 +895,6 @@
 
 <title>Sound Space Custom Maps - Enhanced</title>
 <style>
-
-
 body {
     background-color: #0f0f0f;
     color: white;
@@ -911,6 +908,7 @@ body {
     cursor: default;
     background-color: #333;
 }
+
 .patterns-dropdown-toggle.no-click:hover {
     transform: none;
     background-color: #333;
@@ -986,93 +984,6 @@ h1 {
     -webkit-text-fill-color: transparent;
     margin-bottom: 30px;
 }
-
-
-#filter-toggle, #sort-toggle {
-        padding: 12px 20px;
-        width: auto;
-    }
-
-    #filter-menu {
-        min-width: 280px;
-        max-width: calc(100vw - 40px);
-        left: 50%;
-        right: auto;
-        transform: translate(-50%, -50%);
-        position: fixed;
-        top: 50%;
-        max-height: 80vh;
-        overflow-y: auto;
-    }
-
-    .top-filters-row, .range-filters-container, .bottom-filters-grid {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .top-filters-row .filter-section, .range-filters-container .filter-section {
-        flex: none;
-        margin-bottom: 10px;
-    }
-
-    .range-filter-group {
-        margin-bottom: 15px;
-    }
-
-    #map-list {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 15px;
-        padding: 0 10px;
-    }
-
-    .map-card {
-        padding: 15px;
-        min-height: 180px;
-    }
-
-    .new-tag {
-        font-size: 0.6em;
-        padding: 3px 25px;
-        top: 8px;
-        right: -22px;
-    }
-
-    .map-name {
-        font-size: 1em;
-    }
-
-    .map-artist, .map-mapper, .map-difficulty {
-        font-size: 0.75em;
-    }
-
-    .map-tags {
-        max-width: 100%;
-        justify-content: center;
-    }
-
-    .copy-btn, .action-dropdown-toggle {
-        font-size: 0.75em;
-        padding: 5px 10px;
-    }
-
-    .filter-buttons {
-        justify-content: center;
-    }
-
-    .patterns-dropdown-menu ul {
-        max-height: 100px;
-    }
-
-    .load-more-container {
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .load-more-btn {
-        width: 80%;
-        max-width: 300px;
-    }
 
 .low-quality h1 {
     background: none;
@@ -1535,11 +1446,29 @@ h1 {
     left: 0;
     font-size: 0.8em;
     font-weight: bold;
-    background: linear-gradient(45deg, #ffd700, #ffed4a);
+    background: linear-gradient(135deg, #ffd700, #ffed4a, #ff6b6b);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3), inset 0 0 15px rgba(255, 215, 0, 0.1);
+}
+
+.star-rating::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, #ffd700, #ffed4a, #ff6b6b);
+    border-radius: 12px;
+    z-index: -1;
 }
 
 .artist-name {
@@ -1551,15 +1480,27 @@ h1 {
 }
 
 .low-quality .star-rating {
-    background: none;
+    background: #ffd700;
     color: #ffd700;
     -webkit-text-fill-color: initial;
+    box-shadow: none;
+    border: 1px solid #ffd700;
+}
+
+.low-quality .star-rating::before {
+    display: none;
 }
 
 .star-rating.loading {
     color: #ccc;
     background: none;
     -webkit-text-fill-color: initial;
+    box-shadow: none;
+    border: 1px solid #ccc;
+}
+
+.star-rating.loading::before {
+    display: none;
 }
 
 .map-name {
@@ -2037,5 +1978,5 @@ h1 {
     #search-bar {
         width: 90%;
         padding: 15px;
-    }}
-
+    }
+}
