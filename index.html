@@ -146,6 +146,48 @@ h1 {
     border-color: #4facfe;
 }
 
+/* Star Rating Box */
+.star-rating-box {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #ffd700;
+    border-radius: 8px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 3;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: #ffd700;
+    min-width: 50px;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+.low-quality .star-rating-box {
+    box-shadow: none;
+    border-radius: 5px;
+}
+
+.star-rating-box.calculating {
+    color: #ccc;
+    border-color: #666;
+}
+
+.star-rating-box.error {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+.star-icon {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+}
+
 .filter-dropdown {
     position: relative;
     display: inline-block;
@@ -564,6 +606,51 @@ h1 {
 .map-mapper, .map-difficulty {
     font-size: 0.8em;
     color: #ccc;
+}
+
+.map-stats {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 8px 0;
+}
+
+.map-stat-item {
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    border: none;
+    border-radius: 25px; 
+    padding: 6px 12px; 
+    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 0.85em;
+    color: white;
+}
+
+.low-quality .map-stat-item {
+    background: #1a1a1a;
+    box-shadow: none;
+    border-radius: 15px;
+    border: 1px solid rgba(79, 172, 254, 0.3);
+}
+
+.map-stat-item img {
+    height: 16px;
+    width: auto;
+    filter: drop-shadow(0 0 2px #fff);
+    vertical-align: middle;
+}
+
+.low-quality .map-stat-item img {
+    filter: none;
+}
+
+.map-stat-item span {
+    font-size: 1em;
+    color: #00f2fe;
 }
 
 .map-footer {
@@ -1054,8 +1141,169 @@ let currentDisplayCount = 50; // Show more maps initially for instant loading
 const LOAD_BATCH_SIZE = 30;
 let isLoading = false;
 
-// Simple cache for raw map data
+// Simple cache for raw map data and star ratings
 const mapDataCache = new Map();
+const starRatingCache = new Map();
+
+// Rhythia API Integration using your proxy
+class RhythiaAPIClient {
+    constructor() {
+        this.apiUrl = "https://rhythiaproxy.onrender.com/proxy/getRawStarRating";
+        this.requestQueue = [];
+        this.isProcessing = false;
+        this.rateLimitDelay = 500; // 500ms between requests to avoid rate limiting
+    }
+    
+    async calculateStarRating(rawMapData) {
+        if (!rawMapData || typeof rawMapData !== 'string') {
+            return { error: "Invalid map data" };
+        }
+        
+        return new Promise((resolve) => {
+            this.requestQueue.push({ rawMapData, resolve });
+            this.processQueue();
+        });
+    }
+    
+    async processQueue() {
+        if (this.isProcessing || this.requestQueue.length === 0) return;
+        
+        this.isProcessing = true;
+        
+        while (this.requestQueue.length > 0) {
+            const { rawMapData, resolve } = this.requestQueue.shift();
+            
+            try {
+                const result = await this.makeAPIRequest(rawMapData);
+                resolve(result);
+            } catch (error) {
+                resolve({ error: error.message });
+            }
+            
+            // Rate limiting delay
+            if (this.requestQueue.length > 0) {
+                await new Promise(resolve => setTimeout(resolve, this.rateLimitDelay));
+            }
+        }
+        
+        this.isProcessing = false;
+    }
+    
+    async makeAPIRequest(rawMapData) {
+        const payload = {
+            rawMap: rawMapData,
+            session: ""
+        };
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
+        try {
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const beatmap = data.beatmap || {};
+            const starRating = parseFloat(beatmap.starRating) || 0.0;
+            
+            return {
+                starRating: parseFloat(starRating.toFixed(2)),
+                rp: beatmap.rp || {}
+            };
+            
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('Request timeout');
+            }
+            throw error;
+        }
+    }
+}
+
+const rhythiaAPI = new RhythiaAPIClient();
+
+// Star rating functions
+async function calculateStarRating(rawData) {
+    if (!rawData || typeof rawData !== 'string') return null;
+    
+    if (starRatingCache.has(rawData)) {
+        return starRatingCache.get(rawData);
+    }
+    
+    try {
+        const result = await rhythiaAPI.calculateStarRating(rawData);
+        
+        if (result.error) {
+            console.warn('Rhythia API error:', result.error);
+            return null;
+        }
+        
+        const starRating = result.starRating || 0;
+        starRatingCache.set(rawData, starRating);
+        return starRating;
+    } catch (error) {
+        console.error('Star rating calculation failed:', error);
+        return null;
+    }
+}
+
+function createStarRatingBox(starRating) {
+    const box = document.createElement('div');
+    box.className = 'star-rating-box';
+    
+    if (starRating === null) {
+        box.classList.add('calculating');
+        box.innerHTML = `
+            <span>...</span>
+            <svg class="star-icon" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+        `;
+    } else {
+        box.innerHTML = `
+            <span>${starRating}</span>
+            <svg class="star-icon" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+        `;
+    }
+    
+    return box;
+}
+
+function updateStarRatingBox(box, starRating) {
+    if (starRating === null) {
+        box.classList.remove('calculating');
+        box.classList.add('error');
+        box.innerHTML = `
+            <span>ERR</span>
+            <svg class="star-icon" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+        `;
+    } else {
+        box.classList.remove('calculating', 'error');
+        box.innerHTML = `
+            <span>${starRating}</span>
+            <svg class="star-icon" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+        `;
+    }
+}
 
 // DOM elements
 const searchBar = document.getElementById('search-bar');
@@ -1134,7 +1382,51 @@ async function fetchMapData(url) {
     }
 }
 
-// Main data loading function - INSTANT LOADING
+// Utility functions for map data parsing
+function parseMapData(rawData) {
+    if (!rawData || typeof rawData !== 'string') {
+        return { duration: 0, noteCount: 0 };
+    }
+    
+    const firstCommaIndex = rawData.indexOf(',');
+    if (firstCommaIndex === -1) {
+        return { duration: 0, noteCount: 0 };
+    }
+    
+    const notesData = rawData.substring(firstCommaIndex + 1);
+    const noteArray = notesData.split(',');
+    const noteCount = noteArray.length;
+    
+    if (noteCount === 0) {
+        return { duration: 0, noteCount: 0 };
+    }
+    
+    try {
+        const firstNote = noteArray[0];
+        const firstNoteParts = firstNote.split('|');
+        const startTime = parseFloat(firstNoteParts[2]) || 0;
+        
+        const lastNote = noteArray[noteArray.length - 1];
+        const lastNoteParts = lastNote.split('|');
+        const endTime = parseFloat(lastNoteParts[2]) || 0;
+        
+        const durationMilliseconds = endTime - startTime;
+        return { duration: Math.max(0, durationMilliseconds), noteCount: noteCount };
+    } catch (error) {
+        console.warn('Error parsing map data:', error);
+        return { duration: 0, noteCount: noteCount };
+    }
+}
+
+function formatDuration(milliseconds) {
+    if (milliseconds <= 0 || isNaN(milliseconds)) return "--:--";
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Main data loading function with background processing for duration/notes
 async function loadMapDataFromJSON() {
     try {
         loadingSpinner.style.display = 'block';
@@ -1157,7 +1449,7 @@ async function loadMapDataFromJSON() {
             throw new Error('Invalid JSON format: Expected an array of maps');
         }
         
-        // INSTANT LOADING: Create all map objects immediately without any async processing
+        // Create all map objects immediately for instant display
         maps = mapData.map(mapArray => {
             if (!Array.isArray(mapArray) || mapArray.length < 6) {
                 console.warn('Invalid map data format:', mapArray);
@@ -1173,7 +1465,11 @@ async function loadMapDataFromJSON() {
                 mapper: mapper,
                 difficulty: difficulty,
                 patterns: patterns || [],
-                isNew: isNew || false
+                isNew: isNew || false,
+                duration: undefined,
+                noteCount: undefined,
+                starRating: null,
+                processed: false
             };
         }).filter(map => map !== null);
         
@@ -1183,9 +1479,12 @@ async function loadMapDataFromJSON() {
         
         console.log(`Loaded ${maps.length} maps instantly!`);
         
-        // Show maps immediately
+        // Show maps immediately (they'll show with placeholder data)
         filterAndRenderMaps();
         loadingSpinner.style.display = 'none';
+        
+        // Start background processing for duration and note counts
+        processMapStatsInBackground();
         
     } catch (error) {
         console.error('Error loading map data:', error);
@@ -1201,7 +1500,106 @@ async function loadMapDataFromJSON() {
     }
 }
 
-// Simplified map card creation (no async operations)
+// Background processing for map statistics
+async function processMapStatsInBackground() {
+    const BATCH_SIZE = 5;
+    let processedCount = 0;
+    
+    for (let i = 0; i < maps.length; i += BATCH_SIZE) {
+        const batch = maps.slice(i, i + BATCH_SIZE);
+        
+        const promises = batch.map(async (mapObj, batchIndex) => {
+            const actualIndex = i + batchIndex;
+            if (mapObj.processed) return;
+            
+            const rawLink = getRawUrl(mapObj.link);
+            
+            try {
+                let rawData = mapDataCache.get(rawLink);
+                if (!rawData) {
+                    rawData = await fetchMapData(rawLink);
+                    if (rawData) {
+                        mapDataCache.set(rawLink, rawData);
+                    }
+                }
+                
+                if (rawData) {
+                    const stats = parseMapData(rawData);
+                    maps[actualIndex].duration = stats.duration;
+                    maps[actualIndex].noteCount = stats.noteCount;
+                    
+                    // Calculate star rating using your proxy
+                    const starRating = await calculateStarRating(rawData);
+                    maps[actualIndex].starRating = starRating;
+                    
+                    maps[actualIndex].processed = true;
+                    
+                    // Update the card if it's currently displayed
+                    updateMapCardStats(actualIndex, stats, starRating);
+                }
+            } catch (error) {
+                console.error("Error processing map:", rawLink, error);
+            }
+        });
+        
+        await Promise.all(promises);
+        processedCount += batch.length;
+        
+        // Small delay between batches to avoid blocking
+        if (i + BATCH_SIZE < maps.length) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        
+        // Update progress occasionally
+        if (processedCount % 20 === 0) {
+            console.log(`Processed ${processedCount}/${maps.length} maps...`);
+        }
+    }
+    
+    console.log('Finished processing all map statistics');
+}
+
+// Update a specific map card's stats when they become available
+function updateMapCardStats(mapIndex, stats, starRating = null) {
+    const mapObj = maps[mapIndex];
+    const cards = document.querySelectorAll('.map-card');
+    
+    cards.forEach(card => {
+        const cardLink = card.querySelector('.map-name a')?.href;
+        if (cardLink === mapObj.link) {
+            // Update or add stats section
+            const existingStats = card.querySelector('.map-stats');
+            if (!existingStats) {
+                const mapStatsHtml = `
+                    <div class="map-stats">
+                        <div class="map-stat-item">
+                            <img src="https://i.imgur.com/lv0ynEi.png" alt="Timer Icon">
+                            <span>${formatDuration(stats.duration)}</span>
+                        </div>
+                        <div class="map-stat-item">
+                            <img src="https://i.imgur.com/7pfvgCl.png" alt="Notes Icon">
+                            <span>${stats.noteCount.toLocaleString()}</span>
+                        </div>
+                    </div>
+                `;
+                
+                const mapContent = card.querySelector('.map-content');
+                const mapFooter = card.querySelector('.map-footer');
+                if (mapContent && mapFooter) {
+                    mapFooter.insertAdjacentHTML('beforebegin', mapStatsHtml);
+                }
+            }
+            
+            // Update star rating box if it exists
+            const starRatingBox = card.querySelector('.star-rating-box');
+            if (starRatingBox && starRating !== null) {
+                updateStarRatingBox(starRatingBox, starRating);
+            }
+        }
+    });
+}
+
+// Map card creation with placeholder stats and star ratings that update dynamically
 function createMapCard(m) {
     const card = document.createElement('div');
     card.classList.add('map-card');
@@ -1211,9 +1609,29 @@ function createMapCard(m) {
     }
     card.classList.add(mapDifficulty);
     
+    // Create star rating box
+    const starRatingBox = createStarRatingBox(m.starRating);
+    
     let newTagHtml = '';
     if (m.isNew) {
         newTagHtml = '<div class="new-tag">NEW</div>';
+    }
+    
+    // Show stats if available, placeholder if not
+    let mapStatsHtml = '';
+    if (m.duration !== undefined && m.noteCount !== undefined) {
+        mapStatsHtml = `
+            <div class="map-stats">
+                <div class="map-stat-item">
+                    <img src="https://i.imgur.com/lv0ynEi.png" alt="Timer Icon">
+                    <span>${formatDuration(m.duration)}</span>
+                </div>
+                <div class="map-stat-item">
+                    <img src="https://i.imgur.com/7pfvgCl.png" alt="Notes Icon">
+                    <span>${m.noteCount.toLocaleString()}</span>
+                </div>
+            </div>
+        `;
     }
     
     let patternsHtml = '';
@@ -1246,6 +1664,7 @@ function createMapCard(m) {
             <div class="map-name"><a href="${m.link}" target="_blank" rel="noopener">${m.mapName}</a></div>
             <div class="map-mapper">Mapped by: ${m.mapper}</div>
             <div class="map-difficulty">Difficulty: ${m.difficulty}</div>
+            ${mapStatsHtml}
         </div>
         <div class="map-footer">
             ${patternsHtml}
@@ -1260,6 +1679,9 @@ function createMapCard(m) {
             </div>
         </div>
     `;
+    
+    // Add star rating box
+    card.appendChild(starRatingBox);
     
     return card;
 }
