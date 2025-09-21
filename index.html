@@ -175,15 +175,15 @@
 
     function createStarRating(starRating) {
         if (starRating === null || starRating === undefined) {
-            return '<span class="rating loading">Loading...</span>';
+            return '<span class="star-rating loading">Loading...</span>';
         }
         
         const numRating = parseFloat(starRating);
         if (isNaN(numRating)) {
-            return '<span class="rating">★ 0.00</span>';
+            return '<span class="star-rating">★ 0.00</span>';
         }
         
-        return `<span class="rating">★ ${numRating.toFixed(2)}</span>`;
+        return `<span class="star-rating">★ ${numRating.toFixed(2)}</span>`;
     }
 
     async function loadMapDataFromJSON() {
@@ -1441,27 +1441,29 @@ h1 {
     position: relative;
 }
 
-.rating {
+.star-rating {
     position: absolute;
     left: 0;
     font-size: 0.8em;
     font-weight: bold;
-    color: #00f2fe;
-    -webkit-text-stroke: 0.25px black;
+    color: #ffd700;
     white-space: nowrap;
     padding: 4px 8px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
 }
 
-.rating::before {
+.star-rating::before {
     content: '';
     position: absolute;
     top: -2px;
     left: -2px;
     right: -2px;
     bottom: -2px;
-    background: #696969
+    background: linear-gradient(135deg, #ffd700, #ffed4a, #ff6b6b);
     border-radius: 12px;
-    border: 2px solid transparent;
     z-index: -1;
 }
 
@@ -1474,11 +1476,11 @@ h1 {
 }
 
 .low-quality .star-rating {
-    background: #ffd700;
-    color: #00f2fe;
+    background: #1a1a1a;
+    color: #ffd700;
     -webkit-text-fill-color: initial;
     box-shadow: none;
-    border: 1px solid #ffd700;
+    border: 1px solid rgba(255, 215, 0, 0.3);
 }
 
 .low-quality .star-rating::before {
@@ -1487,7 +1489,7 @@ h1 {
 
 .star-rating.loading {
     color: #ccc;
-    background: none;
+    background: #1a1a1a;
     -webkit-text-fill-color: initial;
     box-shadow: none;
     border: 1px solid #ccc;
@@ -1974,7 +1976,3 @@ h1 {
         padding: 15px;
     }
 }
-
-
-
-
