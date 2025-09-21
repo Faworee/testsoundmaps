@@ -955,15 +955,26 @@ h1 {
 
 @media (max-width: 768px) {
     .header-container {
-        flex-direction: column;
-        gap: 15px;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        min-height: 50px;
+        margin-bottom: 60px;
     }
 
     .performance-toggle {
-        top: -30px;
-        right: 10px;
+        position: absolute;
+        top: -40px;
+        right: 50%;
+        transform: translateX(50%);
         font-size: 0.75em;
         padding: 6px 12px;
+    }
+
+    .header-button {
+        padding: 8px 15px;
+        font-size: 0.9em;
     }
 
     #search-container {
@@ -1144,179 +1155,90 @@ h1 {
 <div id="popup"></div>
 
 <script>
-// Rhythia Star Rating Calculator (JavaScript port)
-class RhythiaStarCalculator {
+// Rhythia API Integration
+class RhythiaAPIClient {
     constructor() {
-        this.DIFFICULTY_MULTIPLIER = 0.0675;
-        this.STRAIN_DECAY_BASE = 0.3;
-        this.STRAIN_STEP = 400;
-        this.DECAY_WEIGHT = 0.9;
-        this.NORMALISED_RADIUS = 50.0;
-        this._previousStrain = 0.0;
+        this.apiUrl = "https://development.rhythia.com/api/getRawStarRating";
+        this.requestQueue = [];
+        this.isProcessing = false;
+        this.rateLimitDelay = 500; // 500ms between requests to avoid rate limiting
     }
     
-    parseRhythiaBeatmap(beatmapString) {
-        const notes = [];
-        const lines = beatmapString.trim().split(',');
+    async calculateStarRating(rawMapData) {
+        if (!rawMapData || typeof rawMapData !== 'string') {
+            return { error: "Invalid map data" };
+        }
         
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (i === 0 && !line.includes('|')) continue;
+        return new Promise((resolve) => {
+            this.requestQueue.push({ rawMapData, resolve });
+            this.processQueue();
+        });
+    }
+    
+    async processQueue() {
+        if (this.isProcessing || this.requestQueue.length === 0) return;
+        
+        this.isProcessing = true;
+        
+        while (this.requestQueue.length > 0) {
+            const { rawMapData, resolve } = this.requestQueue.shift();
             
-            if (line.includes('|')) {
-                try {
-                    const parts = line.split('|');
-                    if (parts.length >= 3) {
-                        const x = parseFloat(parts[0]);
-                        const y = parseFloat(parts[1]);
-                        const time = parseInt(parts[2]);
-                        
-                        const osuX = (x / 2.0) * 512;
-                        const osuY = (y / 2.0) * 384;
-                        
-                        notes.push({
-                            x: osuX,
-                            y: osuY,
-                            time: time,
-                            type: 'circle'
-                        });
-                    }
-                } catch (error) {
-                    continue;
-                }
+            try {
+                const result = await this.makeAPIRequest(rawMapData);
+                resolve(result);
+            } catch (error) {
+                resolve({ error: error.message });
+            }
+            
+            // Rate limiting delay
+            if (this.requestQueue.length > 0) {
+                await new Promise(resolve => setTimeout(resolve, this.rateLimitDelay));
             }
         }
         
-        return notes.sort((a, b) => a.time - b.time);
+        this.isProcessing = false;
     }
     
-    calculateDistance(note1, note2) {
-        const dx = note2.x - note1.x;
-        const dy = note2.y - note1.y;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-    
-    calculateStrainValue(notes, index) {
-        if (index === 0) return 0.0;
+    async makeAPIRequest(rawMapData) {
+        const payload = {
+            rawMap: rawMapData,
+            session: ""
+        };
         
-        const current = notes[index];
-        const previous = notes[index - 1];
-        const timeElapsed = current.time - previous.time;
-        const distance = this.calculateDistance(previous, current);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
         
-        let distanceStrain;
-        if (distance > this.NORMALISED_RADIUS) {
-            distanceStrain = Math.pow(distance / this.NORMALISED_RADIUS, 0.99);
-        } else {
-            distanceStrain = distance / this.NORMALISED_RADIUS;
-        }
-        
-        let timeStrain = 1.0;
-        if (timeElapsed < 25) timeStrain = 1.2;
-        else if (timeElapsed < 50) timeStrain = 1.15;
-        else if (timeElapsed < 100) timeStrain = 1.1;
-        else if (timeElapsed < 200) timeStrain = 1.05;
-        else if (timeElapsed > 400) timeStrain = Math.max(0.3, 1.0 - (timeElapsed - 200) / 1000.0);
-        
-        let strain = distanceStrain * timeStrain;
-        
-        if (index > 0) {
-            const decayFactor = Math.pow(this.STRAIN_DECAY_BASE, timeElapsed / this.STRAIN_STEP);
-            strain += this._previousStrain * decayFactor;
-        }
-        
-        this._previousStrain = strain;
-        return strain;
-    }
-    
-    calculateAimStrain(notes) {
-        if (notes.length < 2) return new Array(notes.length).fill(0.0);
-        
-        const strains = [0.0];
-        this._previousStrain = 0.0;
-        
-        for (let i = 1; i < notes.length; i++) {
-            let strain = this.calculateStrainValue(notes, i);
-            
-            if (i >= 2) {
-                const prevPrev = notes[i-2];
-                const prev = notes[i-1];
-                const curr = notes[i];
-                
-                const v1X = prev.x - prevPrev.x;
-                const v1Y = prev.y - prevPrev.y;
-                const v2X = curr.x - prev.x;
-                const v2Y = curr.y - prev.y;
-                
-                const dotProduct = v1X * v2X + v1Y * v2Y;
-                const det = v1X * v2Y - v1Y * v2X;
-                const angle = Math.abs(Math.atan2(det, dotProduct));
-                
-                if (angle > Math.PI / 6) {
-                    const angleBonus = Math.min(1.5, 1.0 + angle / Math.PI);
-                    strain *= angleBonus;
-                }
-            }
-            
-            strains.push(strain);
-        }
-        
-        return strains;
-    }
-    
-    calculateDifficultyValue(strains) {
-        if (!strains || strains.length === 0) return 0.0;
-        
-        const sortedStrains = [...strains].sort((a, b) => b - a);
-        let difficulty = 0.0;
-        let weight = 1.0;
-        
-        for (const strain of sortedStrains) {
-            difficulty += strain * weight;
-            weight *= this.DECAY_WEIGHT;
-        }
-        
-        return difficulty;
-    }
-    
-    calculateStarRatingFromString(beatmapString) {
         try {
-            const notes = this.parseRhythiaBeatmap(beatmapString);
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
             
-            if (notes.length < 2) {
-                return { error: "Need at least 2 notes for calculation" };
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
-            const filteredNotes = [notes[0]];
-            for (let i = 1; i < notes.length; i++) {
-                const currNote = notes[i];
-                const lastKept = filteredNotes[filteredNotes.length - 1];
-                const distance = this.calculateDistance(lastKept, currNote);
-                if (distance >= 0) {
-                    filteredNotes.push(currNote);
-                }
-            }
-            
-            if (filteredNotes.length < 1) {
-                return { error: "Not enough valid notes after filtering" };
-            }
-            
-            const aimStrains = this.calculateAimStrain(filteredNotes);
-            const aimDifficulty = this.calculateDifficultyValue(aimStrains);
-            
-            let starRating = Math.pow(aimDifficulty, 0.5) * this.DIFFICULTY_MULTIPLIER;
-            const rhythiaMultiplier = 3.5;
-            starRating *= rhythiaMultiplier;
+            const data = await response.json();
+            const beatmap = data.beatmap || {};
+            const starRating = parseFloat(beatmap.starRating) || 0.0;
             
             return {
                 starRating: parseFloat(starRating.toFixed(2)),
-                aimDifficulty: parseFloat(aimDifficulty.toFixed(2)),
-                noteCount: filteredNotes.length,
-                algorithm: "osu!-based (Rhythia compatible)"
+                rp: beatmap.rp || {}
             };
             
         } catch (error) {
-            return { error: `Calculation error: ${error.message}` };
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('Request timeout');
+            }
+            throw error;
         }
     }
 }
@@ -1331,13 +1253,13 @@ let selectedDifficulties = [];
 let selectedPatterns = [];
 let apmFilter = "all";
 let showNewMapsOnly = false;
-let currentDisplayCount = 50;
-const LOAD_BATCH_SIZE = 50;
+let currentDisplayCount = 30; // Start with 30 maps in high quality mode
+const LOAD_BATCH_SIZE = 20; // Smaller batch size for better performance
 let isLoading = false;
 
 const mapDataCache = new Map();
 const starRatingCache = new Map();
-const starCalculator = new RhythiaStarCalculator();
+const rhythiaAPI = new RhythiaAPIClient();
 
 // DOM elements
 const searchBar = document.getElementById('search-bar');
@@ -1366,15 +1288,21 @@ async function calculateStarRating(rawData) {
         return starRatingCache.get(rawData);
     }
     
-    const result = starCalculator.calculateStarRatingFromString(rawData);
-    
-    if (result.error) {
-        console.warn('Star rating calculation error:', result.error);
+    try {
+        const result = await rhythiaAPI.calculateStarRating(rawData);
+        
+        if (result.error) {
+            console.warn('Rhythia API error:', result.error);
+            return null;
+        }
+        
+        const starRating = result.starRating || 0;
+        starRatingCache.set(rawData, starRating);
+        return starRating;
+    } catch (error) {
+        console.error('Star rating calculation failed:', error);
         return null;
     }
-    
-    starRatingCache.set(rawData, result.starRating);
-    return result.starRating;
 }
 
 function createStarRatingBox(starRating) {
@@ -1433,6 +1361,13 @@ performanceToggle.addEventListener('click', () => {
         localStorage.setItem('soundSpaceLowQuality', isLowQualityMode.toString());
     } catch (e) {
         console.warn('Could not save performance preference:', e);
+    }
+    
+    // Adjust display count based on mode
+    if (isLowQualityMode) {
+        currentDisplayCount = filteredMaps.length; // Show all maps
+    } else {
+        currentDisplayCount = Math.min(30, filteredMaps.length); // Reset to 30 for high quality
     }
     
     if (maps.length > 0) {
@@ -1555,12 +1490,10 @@ async function loadMapDataFromJSON() {
             throw new Error('Invalid JSON format: Expected an array of maps');
         }
         
-        const BATCH_SIZE = isLowQualityMode ? 20 : 10;
-        const mapsWithStats = [];
-        
-        for (let i = 0; i < mapData.length; i += BATCH_SIZE) {
-            const batch = mapData.slice(i, i + BATCH_SIZE);
-            const batchPromises = batch.map(async (mapArray) => {
+        // Process maps differently based on quality mode
+        if (isLowQualityMode) {
+            // Low quality mode: Load all maps but with minimal processing
+            maps = mapData.map(mapArray => {
                 if (!Array.isArray(mapArray) || mapArray.length < 6) {
                     console.warn('Invalid map data format:', mapArray);
                     return null;
@@ -1568,7 +1501,7 @@ async function loadMapDataFromJSON() {
                 
                 const [link, mapName, artist, mapper, difficulty, patterns, isNew] = mapArray;
                 
-                const mapObj = {
+                return {
                     link: link,
                     mapName: mapName,
                     artist: artist,
@@ -1580,47 +1513,42 @@ async function loadMapDataFromJSON() {
                     noteCount: undefined,
                     starRating: null
                 };
-                
-                if (isLowQualityMode) {
-                    return mapObj;
+            }).filter(map => map !== null);
+            
+            currentDisplayCount = maps.length; // Show all maps in low quality
+        } else {
+            // High quality mode: Load maps with full processing in smaller batches
+            const INITIAL_BATCH_SIZE = 30;
+            const initialBatch = mapData.slice(0, INITIAL_BATCH_SIZE);
+            
+            // Store all raw map data for later processing
+            const allMapsBasic = mapData.map(mapArray => {
+                if (!Array.isArray(mapArray) || mapArray.length < 6) {
+                    return null;
                 }
                 
-                const rawLink = getRawUrl(link);
+                const [link, mapName, artist, mapper, difficulty, patterns, isNew] = mapArray;
                 
-                try {
-                    let rawData = mapDataCache.get(rawLink);
-                    if (!rawData) {
-                        rawData = await fetchMapData(rawLink);
-                        if (rawData) {
-                            mapDataCache.set(rawLink, rawData);
-                        }
-                    }
-                    
-                    if (rawData) {
-                        const stats = parseMapData(rawData);
-                        mapObj.duration = stats.duration;
-                        mapObj.noteCount = stats.noteCount;
-                        
-                        const starRating = await calculateStarRating(rawData);
-                        mapObj.starRating = starRating;
-                    }
-                    
-                    return mapObj;
-                } catch (error) {
-                    console.error("Error fetching map data for link:", rawLink, error);
-                    return mapObj;
-                }
-            });
+                return {
+                    link: link,
+                    mapName: mapName,
+                    artist: artist,
+                    mapper: mapper,
+                    difficulty: difficulty,
+                    patterns: patterns,
+                    isNew: isNew || false,
+                    duration: undefined,
+                    noteCount: undefined,
+                    starRating: null
+                };
+            }).filter(map => map !== null);
             
-            const batchResults = await Promise.all(batchPromises);
-            mapsWithStats.push(...batchResults);
+            maps = allMapsBasic;
+            currentDisplayCount = INITIAL_BATCH_SIZE;
             
-            if (i + BATCH_SIZE < mapData.length) {
-                await new Promise(resolve => setTimeout(resolve, isLowQualityMode ? 50 : 100));
-            }
+            // Process initial batch with full stats
+            await processMapBatch(0, INITIAL_BATCH_SIZE);
         }
-        
-        maps = mapsWithStats.filter(map => map !== null);
         
         if (maps.length === 0) {
             throw new Error('No valid map data found');
@@ -1640,6 +1568,52 @@ async function loadMapDataFromJSON() {
                 <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #4facfe; color: white; border: none; border-radius: 5px; cursor: pointer;">Retry</button>
             </div>
         `;
+    }
+}
+
+// Process a batch of maps with full stats
+async function processMapBatch(startIndex, endIndex) {
+    if (isLowQualityMode) return; // Skip processing in low quality mode
+    
+    const batchMaps = maps.slice(startIndex, endIndex);
+    const MINI_BATCH_SIZE = 5; // Process in even smaller chunks to avoid blocking
+    
+    for (let i = 0; i < batchMaps.length; i += MINI_BATCH_SIZE) {
+        const miniBatch = batchMaps.slice(i, i + MINI_BATCH_SIZE);
+        const promises = miniBatch.map(async (mapObj, index) => {
+            const actualIndex = startIndex + i + index;
+            
+            const rawLink = getRawUrl(mapObj.link);
+            
+            try {
+                let rawData = mapDataCache.get(rawLink);
+                if (!rawData) {
+                    rawData = await fetchMapData(rawLink);
+                    if (rawData) {
+                        mapDataCache.set(rawLink, rawData);
+                    }
+                }
+                
+                if (rawData) {
+                    const stats = parseMapData(rawData);
+                    maps[actualIndex].duration = stats.duration;
+                    maps[actualIndex].noteCount = stats.noteCount;
+                    
+                    // Calculate star rating using Rhythia API
+                    const starRating = await calculateStarRating(rawData);
+                    maps[actualIndex].starRating = starRating;
+                }
+            } catch (error) {
+                console.error("Error processing map:", rawLink, error);
+            }
+        });
+        
+        await Promise.all(promises);
+        
+        // Small delay between mini-batches to prevent blocking
+        if (i + MINI_BATCH_SIZE < batchMaps.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
     }
 }
 
@@ -1862,13 +1836,13 @@ function renderMaps() {
 function updateLoadMoreButton() {
     const remainingMaps = filteredMaps.length - currentDisplayCount;
     
-    if (remainingMaps <= 0) {
+    if (remainingMaps <= 0 || isLowQualityMode) {
         loadMoreBtn.style.display = 'none';
         scrollIndicator.textContent = `All ${filteredMaps.length} maps loaded`;
     } else {
         loadMoreBtn.style.display = 'block';
         loadMoreBtn.disabled = false;
-        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        const batchSize = LOAD_BATCH_SIZE;
         loadMoreBtn.textContent = `Load ${Math.min(batchSize, remainingMaps)} More Maps`;
         scrollIndicator.textContent = `${remainingMaps} maps remaining - Scroll to auto-load`;
     }
@@ -1882,10 +1856,19 @@ function loadMoreMaps() {
     loadMoreBtn.disabled = true;
     loadMoreBtn.textContent = 'Loading...';
     
-    requestAnimationFrame(() => {
+    requestAnimationFrame(async () => {
         const previousCount = currentDisplayCount;
         const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-        currentDisplayCount = Math.min(currentDisplayCount + batchSize, filteredMaps.length);
+        const newDisplayCount = Math.min(currentDisplayCount + batchSize, filteredMaps.length);
+        
+        // In high quality mode, process the new maps if they haven't been processed yet
+        if (!isLowQualityMode && newDisplayCount > maps.filter(m => m.duration !== undefined).length) {
+            const startIndex = Math.max(0, currentDisplayCount);
+            const endIndex = Math.min(newDisplayCount, maps.length);
+            await processMapBatch(startIndex, endIndex);
+        }
+        
+        currentDisplayCount = newDisplayCount;
         
         const fragment = document.createDocumentFragment();
         for (let i = previousCount; i < currentDisplayCount; i++) {
@@ -1986,8 +1969,7 @@ let searchTimeout;
 searchBar.addEventListener('input', () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-        currentDisplayCount = batchSize;
+        currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
         filterAndRenderMaps();
     }, 300);
 });
@@ -2006,22 +1988,19 @@ document.addEventListener('click', (e) => {
 sortToggle.addEventListener('click', () => {
     sortAscending = !sortAscending;
     sortToggle.textContent = sortAscending ? "Sort: Easy → Hard" : "Sort: Hard → Easy";
-    const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-    currentDisplayCount = batchSize;
+    currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
     filterAndRenderMaps();
 });
 
 newMapsCheckbox.addEventListener('change', () => {
     showNewMapsOnly = newMapsCheckbox.checked;
-    const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-    currentDisplayCount = batchSize;
+    currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
     filterAndRenderMaps();
 });
 
 [durationMinInput, durationMaxInput, notesMinInput, notesMaxInput].forEach(input => {
     input.addEventListener('input', debounce(() => {
-        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-        currentDisplayCount = batchSize;
+        currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
         filterAndRenderMaps();
     }, 300));
 });
@@ -2037,8 +2016,7 @@ document.querySelectorAll('#difficulty-filters .filter-button').forEach(button =
         } else {
             selectedDifficulties = selectedDifficulties.filter(d => d !== difficulty);
         }
-        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-        currentDisplayCount = batchSize;
+        currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
         filterAndRenderMaps();
     });
 });
@@ -2054,8 +2032,7 @@ document.querySelectorAll('#pattern-filters .filter-button').forEach(button => {
         } else {
             selectedPatterns = selectedPatterns.filter(p => p !== pattern);
         }
-        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-        currentDisplayCount = batchSize;
+        currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
         filterAndRenderMaps();
     });
 });
@@ -2063,8 +2040,7 @@ document.querySelectorAll('#pattern-filters .filter-button').forEach(button => {
 document.querySelectorAll('input[name="apm-filter"]').forEach(radio => {
     radio.addEventListener('change', () => {
         apmFilter = radio.value;
-        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-        currentDisplayCount = batchSize;
+        currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
         filterAndRenderMaps();
     });
 });
@@ -2083,14 +2059,12 @@ document.querySelector('.clear-filters').addEventListener('click', () => {
     durationMaxInput.value = '';
     notesMinInput.value = '';
     notesMaxInput.value = '';
-    const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-    currentDisplayCount = batchSize;
+    currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
     filterAndRenderMaps();
 });
 
 document.querySelector('.apply-filters').addEventListener('click', () => {
-    const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-    currentDisplayCount = batchSize;
+    currentDisplayCount = isLowQualityMode ? filteredMaps.length : 30;
     filterAndRenderMaps();
     filterMenu.classList.remove('show');
 });
@@ -2152,4 +2126,4 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 </body>
-
+</html>
