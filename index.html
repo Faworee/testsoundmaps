@@ -1426,7 +1426,7 @@ function formatDuration(milliseconds) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Main data loading function with background processing for duration/notes
+// Main data loading function with priority processing for visible maps
 async function loadMapDataFromJSON() {
     try {
         loadingSpinner.style.display = 'block';
@@ -1483,9 +1483,6 @@ async function loadMapDataFromJSON() {
         filterAndRenderMaps();
         loadingSpinner.style.display = 'none';
         
-        // Start background processing for duration and note counts
-        processMapStatsInBackground();
-        
     } catch (error) {
         console.error('Error loading map data:', error);
         loadingSpinner.style.display = 'none';
@@ -1500,63 +1497,52 @@ async function loadMapDataFromJSON() {
     }
 }
 
-// Background processing for map statistics
-async function processMapStatsInBackground() {
-    const BATCH_SIZE = 5;
-    let processedCount = 0;
+// Process stats for currently visible/filtered maps only
+async function processVisibleMapStats() {
+    const visibleMaps = filteredMaps.slice(0, currentDisplayCount);
+    const unprocessedMaps = visibleMaps.filter(map => !map.processed);
     
-    for (let i = 0; i < maps.length; i += BATCH_SIZE) {
-        const batch = maps.slice(i, i + BATCH_SIZE);
+    if (unprocessedMaps.length === 0) return;
+    
+    console.log(`Processing stats for ${unprocessedMaps.length} visible maps...`);
+    
+    // Process all visible maps in parallel for instant results
+    const promises = unprocessedMaps.map(async (mapObj) => {
+        const mapIndex = maps.findIndex(m => m.link === mapObj.link);
+        if (mapIndex === -1 || mapObj.processed) return;
         
-        const promises = batch.map(async (mapObj, batchIndex) => {
-            const actualIndex = i + batchIndex;
-            if (mapObj.processed) return;
-            
-            const rawLink = getRawUrl(mapObj.link);
-            
-            try {
-                let rawData = mapDataCache.get(rawLink);
-                if (!rawData) {
-                    rawData = await fetchMapData(rawLink);
-                    if (rawData) {
-                        mapDataCache.set(rawLink, rawData);
-                    }
-                }
-                
+        const rawLink = getRawUrl(mapObj.link);
+        
+        try {
+            let rawData = mapDataCache.get(rawLink);
+            if (!rawData) {
+                rawData = await fetchMapData(rawLink);
                 if (rawData) {
-                    const stats = parseMapData(rawData);
-                    maps[actualIndex].duration = stats.duration;
-                    maps[actualIndex].noteCount = stats.noteCount;
-                    
-                    // Calculate star rating using your proxy
-                    const starRating = await calculateStarRating(rawData);
-                    maps[actualIndex].starRating = starRating;
-                    
-                    maps[actualIndex].processed = true;
-                    
-                    // Update the card if it's currently displayed
-                    updateMapCardStats(actualIndex, stats, starRating);
+                    mapDataCache.set(rawLink, rawData);
                 }
-            } catch (error) {
-                console.error("Error processing map:", rawLink, error);
             }
-        });
-        
-        await Promise.all(promises);
-        processedCount += batch.length;
-        
-        // Small delay between batches to avoid blocking
-        if (i + BATCH_SIZE < maps.length) {
-            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            if (rawData) {
+                const stats = parseMapData(rawData);
+                maps[mapIndex].duration = stats.duration;
+                maps[mapIndex].noteCount = stats.noteCount;
+                
+                // Calculate star rating using your proxy
+                const starRating = await calculateStarRating(rawData);
+                maps[mapIndex].starRating = starRating;
+                
+                maps[mapIndex].processed = true;
+                
+                // Update the card immediately
+                updateMapCardStats(mapIndex, stats, starRating);
+            }
+        } catch (error) {
+            console.error("Error processing visible map:", rawLink, error);
         }
-        
-        // Update progress occasionally
-        if (processedCount % 20 === 0) {
-            console.log(`Processed ${processedCount}/${maps.length} maps...`);
-        }
-    }
+    });
     
-    console.log('Finished processing all map statistics');
+    await Promise.all(promises);
+    console.log('Finished processing visible maps');
 }
 
 // Update a specific map card's stats when they become available
@@ -1774,6 +1760,9 @@ function renderMaps() {
         } else {
             mapList.appendChild(fragment);
             updateLoadMoreButton();
+            
+            // Process stats for the newly rendered visible maps
+            processVisibleMapStats();
         }
     }
     
@@ -1817,6 +1806,9 @@ function loadMoreMaps() {
         
         updateLoadMoreButton();
         isLoading = false;
+        
+        // Process stats for newly loaded maps
+        processVisibleMapStats();
     });
 }
 
