@@ -185,8 +185,8 @@
             return '<span class="star-rating loading">Loading...</span>';
         }
         
-        const roundedRating = Math.ceil(starRating);
-        return `<span class="star-rating">★ ${roundedRating}</span>`;
+        const formattedRating = parseFloat(starRating).toFixed(2);
+        return `<span class="star-rating">★ ${formattedRating}</span>`;
     }
 
     async function loadMapDataFromJSON() {
@@ -233,7 +233,7 @@
                             difficulty: difficulty,
                             patterns: patterns,
                             isNew: isNew || false,
-                            starRating: starRating ? Math.ceil(parseFloat(starRating)) : null,
+                            starRating: starRating ? parseFloat(starRating) : null,
                             duration: undefined,
                             noteCount: undefined
                         };
@@ -1427,21 +1427,15 @@ h1 {
     color: #ffd700;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     width: 100%;
 }
 
-.artist-name {
-    flex: 0.6;
-    text-align: center;
-    min-width: 0;
-}
-
 .star-rating {
-    flex: 0.2;
-    text-align: right;
+    flex: 0 0 auto;
+    text-align: left;
     font-size: 0.8em;
     font-weight: bold;
     background: linear-gradient(45deg, #ffd700, #ffed4a);
@@ -1450,6 +1444,16 @@ h1 {
     background-clip: text;
     white-space: nowrap;
     min-width: fit-content;
+    order: -1;
+}
+
+.artist-name {
+    flex: 1;
+    text-align: center;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .low-quality .star-rating {
