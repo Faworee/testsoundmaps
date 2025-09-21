@@ -1,4 +1,880 @@
-<!DOCTYPE html>
+
+</style>
+</head>
+<body>
+
+<div class="header-container">
+    <a href="/SoundSpaceCustoms/Info" class="header-button info-button">Info</a>
+    <button class="performance-toggle" id="performance-toggle">Low Quality Mode</button>
+    <a href="https://faworee.github.io/SoundSpaceCustoms/SubmitMaps" class="header-button discord-button">Submit Map</a>
+</div>
+
+<h1>Sound Space Custom Maps</h1>
+
+<div id="search-container">
+    <input type="text" id="search-bar" placeholder="Search maps, artists or mappers...">
+    
+    <div class="filter-dropdown">
+        <button id="filter-toggle">Filters</button>
+        <div id="filter-menu">
+            <div class="top-filters-row">
+                <div class="filter-section">
+                    <h3>Difficulty</h3>
+                    <div class="filter-buttons" id="difficulty-filters">
+                        <button class="filter-button" data-filter="Easy">Easy</button>
+                        <button class="filter-button" data-filter="Medium">Medium</button>
+                        <button class="filter-button" data-filter="Hard">Hard</button>
+                        <button class="filter-button" data-filter="Logic">Logic</button>
+                        <button class="filter-button" data-filter="Brrrr">Brrrr</button>
+                        <button class="filter-button" data-filter="Tasukete">Tasukete</button>
+                    </div>
+                </div>
+                
+                <div class="filter-section">
+                    <h3>Patterns</h3>
+                    <div class="filter-buttons" id="pattern-filters">
+                        <button class="filter-button" data-filter="Streams">Streams</button>
+                        <button class="filter-button" data-filter="Walls">Walls</button>
+                        <button class="filter-button" data-filter="Tech">Tech</button>
+                        <button class="filter-button" data-filter="Jumps">Jumps</button>
+                        <button class="filter-button" data-filter="Quantum">Quantum</button>
+                        <button class="filter-button" data-filter="Unconventional">Unconventional</button>
+                        <button class="filter-button" data-filter="Bursts">Bursts</button>
+                        <button class="filter-button" data-filter="Timing">Timing</button>
+                        <button class="filter-button" data-filter="Stacks">Stacks</button>
+                        <button class="filter-button" data-filter="Spins">Spins</button>
+                        <button class="filter-button" data-filter="Slides">Slides</button>
+                        <button class="filter-button" data-filter="Vibros">Vibros</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="range-filters-container">
+                <div class="filter-section">
+                    <h3>Duration Filter</h3>
+                    <div class="textbox-group">
+                        <input type="text" id="duration-min" placeholder="0:00" class="filter-textbox">
+                        <span>-</span>
+                        <input type="text" id="duration-max" placeholder="5:00" class="filter-textbox">
+                    </div>
+                </div>
+                
+                <div class="filter-section">
+                    <h3>Notes Filter</h3>
+                    <div class="textbox-group">
+                        <input type="number" id="notes-min" placeholder="0" class="filter-textbox">
+                        <span>-</span>
+                        <input type="number" id="notes-max" placeholder="10000" class="filter-textbox">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-filters-grid">
+                <div class="filter-section">
+                    <h3>APM Music Filter</h3>
+                    <div class="apm-filter">
+                        <div class="apm-option">
+                            <input type="radio" id="apm-all" name="apm-filter" value="all" checked>
+                            <label for="apm-all">All maps (APM + Normal)</label>
+                        </div>
+                        <div class="apm-option">
+                            <input type="radio" id="apm-only" name="apm-filter" value="only">
+                            <label for="apm-only">Only APM Music maps</label>
+                        </div>
+                        <div class="apm-option">
+                            <input type="radio" id="apm-none" name="apm-filter" value="none">
+                            <label for="apm-none">No APM Music maps</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Other Filters</h3>
+                    <div class="other-filters">
+                        <div class="filter-option">
+                            <input type="checkbox" id="new-maps-only">
+                            <label for="new-maps-only">New Maps Only</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="filter-actions">
+                <button class="clear-filters">Clear All</button>
+                <button class="apply-filters">Apply Filters</button>
+            </div>
+        </div>
+    </div>
+
+    <button id="sort-toggle">Sort: Easy → Hard</button>
+</div>
+
+<div class="loading-spinner" id="loading-spinner"></div>
+<div id="map-list"></div>
+
+<div class="load-more-container" id="load-more-container">
+    <button id="load-more-btn" class="load-more-btn">Load More Maps</button>
+    <div class="scroll-indicator" id="scroll-indicator">Scroll down to auto-load more maps</div>
+</div>
+
+<div id="popup"></div>
+
+<script>
+    let isLowQualityMode = false;
+    const difficultyOrder = ["Easy", "Medium", "Hard", "Logic", "Brrrr", "Tasukete"];
+    let sortAscending = true;
+    let maps = [];
+    let filteredMaps = [];
+    let selectedDifficulties = [];
+    let selectedPatterns = [];
+    let apmFilter = "all";
+    let showNewMapsOnly = false;
+    let currentDisplayCount = 50;
+    const LOAD_BATCH_SIZE = 50;
+    let isLoading = false;
+    let infiniteScrollEnabled = true;
+    
+    const mapDataCache = new Map();
+    
+    const searchBar = document.getElementById('search-bar');
+    const mapList = document.getElementById('map-list');
+    const sortToggle = document.getElementById('sort-toggle');
+    const filterToggle = document.getElementById('filter-toggle');
+    const filterMenu = document.getElementById('filter-menu');
+    const popup = document.getElementById('popup');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const loadMoreContainer = document.getElementById('load-more-container');
+    const scrollIndicator = document.getElementById('scroll-indicator');
+    const performanceToggle = document.getElementById('performance-toggle');
+
+    const durationMinInput = document.getElementById('duration-min');
+    const durationMaxInput = document.getElementById('duration-max');
+    const notesMinInput = document.getElementById('notes-min');
+    const notesMaxInput = document.getElementById('notes-max');
+    const newMapsCheckbox = document.getElementById('new-maps-only');
+
+    performanceToggle.addEventListener('click', () => {
+        isLowQualityMode = !isLowQualityMode;
+        document.body.classList.toggle('low-quality', isLowQualityMode);
+        performanceToggle.classList.toggle('active', isLowQualityMode);
+        performanceToggle.textContent = isLowQualityMode ? 'High Quality Mode' : 'Low Quality Mode';
+        
+        try {
+            localStorage.setItem('soundSpaceLowQuality', isLowQualityMode.toString());
+        } catch (e) {
+            console.warn('Could not save performance preference:', e);
+        }
+        
+        if (maps.length > 0) {
+            renderMaps();
+        }
+    });
+
+    try {
+        const savedPreference = localStorage.getItem('soundSpaceLowQuality');
+        if (savedPreference === 'true') {
+            performanceToggle.click();
+        }
+    } catch (e) {
+        console.warn('Could not load performance preference:', e);
+    }
+
+    function createStarRating(starRating) {
+        if (starRating === null || starRating === undefined) {
+            return '<span class="star-rating loading">Loading...</span>';
+        }
+        
+        const roundedRating = Math.ceil(starRating);
+        return `<span class="star-rating">★ ${roundedRating}</span>`;
+    }
+
+    async function loadMapDataFromJSON() {
+        try {
+            loadingSpinner.style.display = 'block';
+            const timestamp = Date.now();
+            const response = await fetch(`Mapdata.json?v=${timestamp}`, {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to load map data: ${response.status} ${response.statusText}`);
+            }
+            
+            const mapData = await response.json();
+            
+            if (!Array.isArray(mapData)) {
+                throw new Error('Invalid JSON format: Expected an array of maps');
+            }
+            
+            const BATCH_SIZE = isLowQualityMode ? 20 : 10;
+            const mapsWithStats = [];
+            
+            for (let i = 0; i < mapData.length; i += BATCH_SIZE) {
+                const batch = mapData.slice(i, i + BATCH_SIZE);
+                const batchPromises = batch.map(async (mapArray) => {
+                    if (!Array.isArray(mapArray) || mapArray.length < 7) {
+                        console.warn('Invalid map data format:', mapArray);
+                        return null;
+                    }
+                    
+                    const [link, mapName, artist, mapper, difficulty, patterns, isNew, starRating] = mapArray;
+                    
+                    if (isLowQualityMode) {
+                        return {
+                            link: link,
+                            mapName: mapName,
+                            artist: artist,
+                            mapper: mapper,
+                            difficulty: difficulty,
+                            patterns: patterns,
+                            isNew: isNew || false,
+                            starRating: starRating ? Math.ceil(parseFloat(starRating)) : null,
+                            duration: undefined,
+                            noteCount: undefined
+                        };
+                    }
+                    
+                    const rawLink = getRawUrl(link);
+                    
+                    try {
+                        let rawData = mapDataCache.get(rawLink);
+                        if (!rawData) {
+                            rawData = await fetchMapData(rawLink);
+                            if (rawData) {
+                                mapDataCache.set(rawLink, rawData);
+                            }
+                        }
+                        
+                        const stats = rawData ? parseMapData(rawData) : { duration: undefined, noteCount: undefined };
+                        
+                        return {
+                            link: link,
+                            mapName: mapName,
+                            artist: artist,
+                            mapper: mapper,
+                            difficulty: difficulty,
+                            patterns: patterns,
+                            isNew: isNew || false,
+                            starRating: starRating ? Math.ceil(parseFloat(starRating)) : null,
+                            duration: stats.duration,
+                            noteCount: stats.noteCount
+                        };
+                    } catch (error) {
+                        console.error("Error fetching map data for link:", rawLink, error);
+                        return {
+                            link: link,
+                            mapName: mapName,
+                            artist: artist,
+                            mapper: mapper,
+                            difficulty: difficulty,
+                            patterns: patterns,
+                            isNew: isNew || false,
+                            starRating: starRating ? Math.ceil(parseFloat(starRating)) : null,
+                            duration: undefined,
+                            noteCount: undefined
+                        };
+                    }
+                });
+                
+                const batchResults = await Promise.all(batchPromises);
+                mapsWithStats.push(...batchResults);
+                
+                if (i + BATCH_SIZE < mapData.length) {
+                    await new Promise(resolve => setTimeout(resolve, isLowQualityMode ? 50 : 100));
+                }
+            }
+            
+            maps = mapsWithStats.filter(map => map !== null);
+            
+            if (maps.length === 0) {
+                throw new Error('No valid map data found');
+            }
+            
+            console.log(`Loaded ${maps.length} maps from JSON file with star ratings!`);
+            filterAndRenderMaps();
+            
+        } catch (error) {
+            console.error('Error loading map data:', error);
+            loadingSpinner.style.display = 'none';
+            mapList.innerHTML = `
+                <div class="error-message">
+                    <h3>Failed to Load Map Data</h3>
+                    <p>Error: ${error.message}</p>
+                    <p>Please ensure that:</p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>The file "Mapdata.json" exists in the same directory</li>
+                        <li>The JSON file contains valid map data in the correct format</li>
+                        <li>Your web server allows loading local JSON files</li>
+                    </ul>
+                    <p>If running locally, you may need to serve this through a web server rather than opening the HTML file directly.</p>
+                    <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #4facfe; color: white; border: none; border-radius: 5px; cursor: pointer;">Retry</button>
+                </div>
+            `;
+        }
+    }
+
+    function parseMapData(rawData) {
+        if (!rawData || typeof rawData !== 'string') {
+            return { duration: 0, noteCount: 0 };
+        }
+        
+        const firstCommaIndex = rawData.indexOf(',');
+        if (firstCommaIndex === -1) {
+            return { duration: 0, noteCount: 0 };
+        }
+        
+        const notesData = rawData.substring(firstCommaIndex + 1);
+        const noteArray = notesData.split(',');
+        const noteCount = noteArray.length;
+        
+        if (noteCount === 0) {
+            return { duration: 0, noteCount: 0 };
+        }
+        
+        try {
+            const firstNote = noteArray[0];
+            const firstNoteParts = firstNote.split('|');
+            const startTime = parseFloat(firstNoteParts[2]) || 0;
+            
+            const lastNote = noteArray[noteArray.length - 1];
+            const lastNoteParts = lastNote.split('|');
+            const endTime = parseFloat(lastNoteParts[2]) || 0;
+            
+            const durationMilliseconds = endTime - startTime;
+            return { duration: Math.max(0, durationMilliseconds), noteCount: noteCount };
+        } catch (error) {
+            console.warn('Error parsing map data:', error);
+            return { duration: 0, noteCount: noteCount };
+        }
+    }
+
+    function formatDuration(milliseconds) {
+        if (milliseconds <= 0 || isNaN(milliseconds)) return "--:--";
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function parseTimeToMilliseconds(timeString) {
+        if (!timeString || timeString === "") return null;
+        const parts = timeString.split(':');
+        if (parts.length !== 2) return null;
+        const mins = parseInt(parts[0]) || 0;
+        const secs = parseInt(parts[1]) || 0;
+        return (mins * 60 + secs) * 1000;
+    }
+
+    function matchesRangeFilter(value, minInput, maxInput) {
+        const minVal = minInput === null ? -Infinity : minInput;
+        const maxVal = maxInput === null ? Infinity : maxInput;
+        return value >= minVal && value <= maxVal;
+    }
+
+    async function fetchMapData(url) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        try {
+            const response = await fetch(url, {
+                signal: controller.signal,
+                cache: 'default' 
+            });
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.text();
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.warn("Fetch timeout for:", url);
+            } else {
+                console.error("Error fetching map data:", error);
+            }
+            return null;
+        }
+    }
+
+    let scrollTimeout;
+    function checkScroll() {
+        if (scrollTimeout) return;
+        
+        scrollTimeout = setTimeout(() => {
+            if (!infiniteScrollEnabled || isLoading) {
+                scrollTimeout = null;
+                return;
+            }
+            
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const windowHeight = window.innerHeight;
+            const documentHeight = document.documentElement.scrollHeight;
+            
+            if (scrollTop + windowHeight >= documentHeight - 200) {
+                loadMoreMaps();
+            }
+            scrollTimeout = null;
+        }, 100);
+    }
+
+    function loadMoreMaps() {
+        if (isLoading || currentDisplayCount >= filteredMaps.length) return;
+        
+        isLoading = true;
+        loadingSpinner.style.display = 'block';
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent = 'Loading...';
+        
+        requestAnimationFrame(() => {
+            const previousCount = currentDisplayCount;
+            const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+            currentDisplayCount = Math.min(currentDisplayCount + batchSize, filteredMaps.length);
+            
+            const fragment = document.createDocumentFragment();
+            for (let i = previousCount; i < currentDisplayCount; i++) {
+                const m = filteredMaps[i];
+                const card = createMapCard(m);
+                fragment.appendChild(card);
+            }
+            mapList.appendChild(fragment);
+            
+            updateLoadMoreButton();
+            isLoading = false;
+            loadingSpinner.style.display = 'none';
+        });
+    }
+
+    function updateLoadMoreButton() {
+        const remainingMaps = filteredMaps.length - currentDisplayCount;
+        
+        if (remainingMaps <= 0) {
+            loadMoreBtn.style.display = 'none';
+            scrollIndicator.textContent = `All ${filteredMaps.length} maps loaded`;
+        } else {
+            loadMoreBtn.style.display = 'block';
+            loadMoreBtn.disabled = false;
+            const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+            loadMoreBtn.textContent = `Load ${Math.min(batchSize, remainingMaps)} More Maps`;
+            scrollIndicator.textContent = `${remainingMaps} maps remaining - Scroll to auto-load`;
+        }
+    }
+
+    window.addEventListener('scroll', checkScroll, { passive: true });
+    
+    loadMoreBtn.addEventListener('click', () => {
+        if (!isLoading) {
+            loadMoreMaps();
+        }
+    });
+
+    let searchTimeout;
+    searchBar.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+            currentDisplayCount = batchSize;
+            filterAndRenderMaps();
+        }, 300);
+    });
+
+    filterToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        filterMenu.classList.toggle('show');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!filterToggle.contains(e.target) && !filterMenu.contains(e.target)) {
+            filterMenu.classList.remove('show');
+        }
+    });
+
+    newMapsCheckbox.addEventListener('change', () => {
+        showNewMapsOnly = newMapsCheckbox.checked;
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = batchSize;
+        filterAndRenderMaps();
+    });
+
+    sortToggle.addEventListener('click', () => {
+        sortAscending = !sortAscending;
+        sortToggle.textContent = sortAscending ? "Sort: Easy → Hard" : "Sort: Hard → Easy";
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = batchSize;
+        filterAndRenderMaps();
+    });
+
+    [durationMinInput, durationMaxInput, notesMinInput, notesMaxInput].forEach(input => {
+        input.addEventListener('input', debounce(() => {
+            const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+            currentDisplayCount = batchSize;
+            filterAndRenderMaps();
+        }, 300));
+    });
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    document.querySelectorAll('#difficulty-filters .filter-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const difficulty = button.dataset.filter;
+            button.classList.toggle('active');
+            if (button.classList.contains('active')) {
+                if (!selectedDifficulties.includes(difficulty)) {
+                    selectedDifficulties.push(difficulty);
+                }
+            } else {
+                selectedDifficulties = selectedDifficulties.filter(d => d !== difficulty);
+            }
+            const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+            currentDisplayCount = batchSize;
+            filterAndRenderMaps();
+        });
+    });
+
+    document.querySelectorAll('#pattern-filters .filter-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const pattern = button.dataset.filter;
+            button.classList.toggle('active');
+            if (button.classList.contains('active')) {
+                if (!selectedPatterns.includes(pattern)) {
+                    selectedPatterns.push(pattern);
+                }
+            } else {
+                selectedPatterns = selectedPatterns.filter(p => p !== pattern);
+            }
+            const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+            currentDisplayCount = batchSize;
+            filterAndRenderMaps();
+        });
+    });
+
+    document.querySelectorAll('input[name="apm-filter"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            apmFilter = radio.value;
+            const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+            currentDisplayCount = batchSize;
+            filterAndRenderMaps();
+        });
+    });
+
+    document.querySelector('.clear-filters').addEventListener('click', () => {
+        selectedDifficulties = [];
+        selectedPatterns = [];
+        apmFilter = "all";
+        showNewMapsOnly = false;
+        document.querySelectorAll('.filter-button.active').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.getElementById('apm-all').checked = true;
+        newMapsCheckbox.checked = false;
+        durationMinInput.value = '';
+        durationMaxInput.value = '';
+        notesMinInput.value = '';
+        notesMaxInput.value = '';
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = batchSize;
+        filterAndRenderMaps();
+    });
+
+    document.querySelector('.apply-filters').addEventListener('click', () => {
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = batchSize;
+        filterAndRenderMaps();
+        filterMenu.classList.remove('show');
+    });
+
+    function showPopup(message, isError = false) {
+        popup.textContent = message;
+        popup.style.backgroundColor = isError ? "#dc3545" : "#28a745";
+        popup.style.display = "block";
+        setTimeout(() => {
+            popup.style.display = "none";
+        }, 2500);
+    }
+
+    function isApmMap(artist) {
+        return artist.toLowerCase().includes('apm music');
+    }
+
+    function getRawUrl(url) {
+        if (url.includes('github.com')) {
+            let newUrl = url.replace('github.com', 'raw.githubusercontent.com');
+            newUrl = newUrl.replace('/blob/', '/').replace('/raw/', '/');
+            return newUrl;
+        }
+        if (url.includes('gitlab.com') && url.includes('/-/blob/')) {
+            return url.replace('/-/blob/', '/-/raw/');
+        }
+        return url;
+    }
+
+    function filterAndRenderMaps() {
+        const searchText = searchBar.value.toLowerCase();
+        
+        const durationMin = parseTimeToMilliseconds(durationMinInput.value);
+        const durationMax = parseTimeToMilliseconds(durationMaxInput.value);
+        const notesMin = notesMinInput.value ? parseInt(notesMinInput.value) : null;
+        const notesMax = notesMaxInput.value ? parseInt(notesMaxInput.value) : null;
+        
+        filteredMaps = maps.filter(m => {
+            const matchesSearch = m.mapName.toLowerCase().includes(searchText) || 
+                                m.artist.toLowerCase().includes(searchText) || 
+                                m.mapper.toLowerCase().includes(searchText);
+            const matchesDifficulty = selectedDifficulties.length === 0 || selectedDifficulties.includes(m.difficulty);
+            const matchesPatterns = selectedPatterns.length === 0 || selectedPatterns.every(pattern => m.patterns.includes(pattern));
+            
+            const isApm = isApmMap(m.artist);
+            let matchesApm = true;
+            if (apmFilter === "only") {
+                matchesApm = isApm;
+            } else if (apmFilter === "none") {
+                matchesApm = !isApm;
+            }
+
+            const matchesDuration = matchesRangeFilter(m.duration || 0, durationMin, durationMax);
+            const matchesNotes = matchesRangeFilter(m.noteCount || 0, notesMin, notesMax);
+            const matchesNewFilter = !showNewMapsOnly || m.isNew;
+
+            return matchesSearch && matchesDifficulty && matchesPatterns && matchesApm && 
+                   matchesDuration && matchesNotes && matchesNewFilter;
+        });
+
+        filteredMaps.sort((a, b) => {
+            const diffA = difficultyOrder.indexOf(a.difficulty);
+            const diffB = difficultyOrder.indexOf(b.difficulty);
+            const safeA = diffA === -1 ? difficultyOrder.length : diffA;
+            const safeB = diffB === -1 ? difficultyOrder.length : diffB;
+            const difficultyComparison = sortAscending ? safeA - safeB : safeB - safeA;
+            if (difficultyComparison !== 0) {
+                return difficultyComparison;
+            }
+            if (a.isNew !== b.isNew) {
+                return a.isNew ? -1 : 1;
+            }
+            const artistComparison = a.artist.localeCompare(b.artist);
+            if (artistComparison !== 0) {
+                return artistComparison;
+            }
+            const mapNameComparison = a.mapName.localeCompare(b.mapName);
+            if (mapNameComparison !== 0) {
+                return mapNameComparison;
+            }
+            return a.mapper.localeCompare(b.mapper);
+        });
+
+        renderMaps();
+    }
+
+    function renderMaps() {
+        mapList.innerHTML = "";
+        const itemsToShow = Math.min(filteredMaps.length, currentDisplayCount);
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < itemsToShow; i++) {
+            const m = filteredMaps[i];
+            const card = createMapCard(m);
+            fragment.appendChild(card);
+        }
+        mapList.appendChild(fragment);
+        updateLoadMoreButton();
+        loadingSpinner.style.display = 'none';
+    }
+
+    function createMapCard(m) {
+        const card = document.createElement('div');
+        card.classList.add('map-card');
+        let mapDifficulty = m.difficulty.toLowerCase();
+        if (m.difficulty === "No Data") {
+            mapDifficulty = "brrrr";
+        }
+        card.classList.add(mapDifficulty);
+        
+        let newTagHtml = '';
+        if (m.isNew) {
+            newTagHtml = '<div class="new-tag">NEW</div>';
+        }
+
+        let mapStatsHtml = '';
+        if (!isLowQualityMode || (m.duration !== undefined && m.noteCount !== undefined)) {
+            mapStatsHtml = `
+                <div class="map-stats">
+                    <div class="map-stat-item">
+                        <img src="https://i.imgur.com/lv0ynEi.png" alt="Timer Icon">
+                        <span>${m.duration !== undefined ? formatDuration(m.duration) : '--:--'}</span>
+                    </div>
+                    <div class="map-stat-item">
+                        <img src="https://i.imgur.com/7pfvgCl.png" alt="Notes Icon">
+                        <span>${m.noteCount !== undefined ? m.noteCount.toLocaleString() : '----'}</span>
+                    </div>
+                </div>
+            `;
+        } else if (isLowQualityMode) {
+            mapStatsHtml = `
+                <div class="map-stats">
+                    <div class="map-stat-item">
+                        <span style="color: #ccc; font-size: 0.8em;">Stats disabled in Low Quality Mode</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        let patternsHtml = '';
+        if (m.patterns && m.patterns.length > 0) {
+            const patternListHtml = m.patterns.map(p => {
+                const patternName = p === "No Data" ? "No Pattern Data" : p;
+                return `<li>${patternName}</li>`;
+            }).join('');
+            patternsHtml = `
+                <div class="patterns-dropdown-container">
+                    <button class="patterns-dropdown-toggle" onclick="togglePatternsDropdown(this)">Show Patterns</button>
+                    <div class="patterns-dropdown-menu">
+                        <ul>
+                            ${patternListHtml}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        } else {
+            patternsHtml = `
+                <div class="patterns-dropdown-container">
+                    <button class="patterns-dropdown-toggle no-click">No Patterns</button>
+                </div>
+            `;
+        }
+
+        const escapedLink = m.link.replace(/'/g, "\\'");
+        const starRatingHtml = createStarRating(m.starRating);
+        
+        card.innerHTML = `
+            ${newTagHtml}
+            <div class="map-content">
+                <div class="map-artist">
+                    <span class="artist-name">${m.artist}</span>
+                    ${starRatingHtml}
+                </div>
+                <div class="map-name"><a href="${m.link}" target="_blank" rel="noopener">${m.mapName}</a></div>
+                <div class="map-mapper">Mapped by: ${m.mapper}</div>
+                <div class="map-difficulty">Difficulty: ${m.difficulty}</div>
+                ${mapStatsHtml}
+            </div>
+            <div class="map-footer">
+                ${patternsHtml}
+                <div class="action-buttons">
+                    <button class="copy-btn" onclick="copyLink('${escapedLink}', this)">Copy Link</button>
+                    <div class="action-dropdown">
+                        <button class="action-dropdown-toggle" onclick="toggleActionDropdown(this)">&#x22EE;</button>
+                        <div class="action-dropdown-menu">
+                            <a href="#" class="dropdown-item" onclick="copyRawData('${escapedLink}')">Copy Raw</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        return card;
+    }
+
+    function copyLink(link, button) {
+        navigator.clipboard.writeText(link).then(() => {
+            button.classList.add("copied");
+            button.textContent = "Copied!";
+            showPopup("Link copied!", false);
+            setTimeout(() => {
+                button.classList.remove("copied");
+                button.textContent = "Copy Link";
+            }, 1000);
+        }).catch(err => {
+            showPopup("Failed to copy link.", true);
+            console.error('Failed to copy link:', err);
+        });
+    }
+
+    async function copyRawData(link) {
+        try {
+            let rawContent = mapDataCache.get(link);
+            if (!rawContent) {
+                const rawLink = getRawUrl(link);
+                rawContent = await fetchMapData(rawLink);
+                if (rawContent) {
+                    mapDataCache.set(rawLink, rawContent);
+                }
+            }
+            
+            if (rawContent) {
+                navigator.clipboard.writeText(rawContent).then(() => {
+                    showPopup("Raw data copied!", false);
+                }).catch(() => {
+                    showPopup("Failed to copy raw data.", true);
+                });
+            } else {
+                showPopup("Failed to fetch raw data.", true);
+            }
+        } catch (error) {
+            showPopup("Failed to copy raw data.", true);
+            console.error('Failed to fetch or copy raw data:', error);
+        }
+    }
+
+    function togglePatternsDropdown(button) {
+        if (button.classList.contains('no-click')) {
+            return;
+        }
+        
+        const dropdownMenu = button.nextElementSibling;
+        dropdownMenu.classList.toggle('show');
+        const allMenus = document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu');
+        allMenus.forEach(menu => {
+            if (menu !== dropdownMenu) {
+                menu.classList.remove('show');
+            }
+        });
+    }
+
+    function toggleActionDropdown(button) {
+        const dropdownMenu = button.nextElementSibling;
+        dropdownMenu.classList.toggle('show');
+        const allMenus = document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu');
+        allMenus.forEach(menu => {
+            if (menu !== dropdownMenu) {
+                menu.classList.remove('show');
+            }
+        });
+    }
+
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.patterns-dropdown-container') && !event.target.closest('.action-dropdown')) {
+            document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+    });
+
+    setInterval(() => {
+        if (mapDataCache.size > 1000) {
+            console.log('Clearing map data cache to free memory');
+            mapDataCache.clear();
+        }
+    }, 300000); 
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadMapDataFromJSON();
+    });
+</script>
+</body>
+</html><!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -10,7 +886,7 @@
 <meta property="og:url" content="https://faworee.github.io/SoundSpaceCustoms/">
 <meta property="og:type" content="website">
 
-<title>Sound Space Custom Maps - Instant Loading</title>
+<title>Sound Space Custom Maps - Enhanced</title>
 <style>
 body {
     background-color: #0f0f0f;
@@ -146,48 +1022,6 @@ h1 {
     border-color: #4facfe;
 }
 
-/* Star Rating Box */
-.star-rating-box {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(0, 0, 0, 0.85);
-    border: 2px solid #ffd700;
-    border-radius: 8px;
-    padding: 4px 8px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    z-index: 3;
-    font-size: 0.8em;
-    font-weight: bold;
-    color: #ffd700;
-    min-width: 50px;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
-}
-
-.low-quality .star-rating-box {
-    box-shadow: none;
-    border-radius: 5px;
-}
-
-.star-rating-box.calculating {
-    color: #ccc;
-    border-color: #666;
-}
-
-.star-rating-box.error {
-    color: #ff6b6b;
-    border-color: #ff6b6b;
-}
-
-.star-icon {
-    width: 12px;
-    height: 12px;
-    fill: currentColor;
-}
-
 .filter-dropdown {
     position: relative;
     display: inline-block;
@@ -315,6 +1149,28 @@ h1 {
     flex: 0 1 auto;
     margin-bottom: 0;
     min-width: 120px;
+}
+
+.duration-filter-section, .notes-filter-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.duration-filter-section h3, .notes-filter-section h3 {
+    color: #4facfe;
+    font-size: 1.1em;
+    margin-bottom: 10px;
+}
+
+.range-filter-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
 }
 
 .textbox-group {
@@ -563,13 +1419,49 @@ h1 {
     align-items: center;
     text-align: center;
     gap: 8px;
-    margin-top: 5px;
 }
 
 .map-artist {
     font-size: 0.9em;
     font-weight: bold;
     color: #ffd700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.artist-name {
+    flex: 0.6;
+    text-align: center;
+    min-width: 0;
+}
+
+.star-rating {
+    flex: 0.2;
+    text-align: right;
+    font-size: 0.8em;
+    font-weight: bold;
+    background: linear-gradient(45deg, #ffd700, #ffed4a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    white-space: nowrap;
+    min-width: fit-content;
+}
+
+.low-quality .star-rating {
+    background: none;
+    color: #ffd700;
+    -webkit-text-fill-color: initial;
+}
+
+.star-rating.loading {
+    color: #ccc;
+    background: none;
+    -webkit-text-fill-color: initial;
 }
 
 .map-name {
@@ -608,49 +1500,30 @@ h1 {
     color: #ccc;
 }
 
-.map-stats {
-    display: flex;
-    justify-content: center;
+.map-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
+    width: 100%;
     margin: 8px 0;
 }
 
-.map-stat-item {
-    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-    border: none;
-    border-radius: 25px; 
-    padding: 6px 12px; 
-    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    font-size: 0.85em;
-    color: white;
-}
-
-.low-quality .map-stat-item {
-    background: #1a1a1a;
-    box-shadow: none;
-    border-radius: 15px;
+.map-duration, .map-notes {
+    background: rgba(79, 172, 254, 0.1);
+    padding: 8px 10px;
+    border-radius: 10px;
     border: 1px solid rgba(79, 172, 254, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-size: 0.75em;
+    white-space: nowrap;
 }
 
-.map-stat-item img {
-    height: 16px;
-    width: auto;
-    filter: drop-shadow(0 0 2px #fff);
-    vertical-align: middle;
-}
-
-.low-quality .map-stat-item img {
-    filter: none;
-}
-
-.map-stat-item span {
-    font-size: 1em;
-    color: #00f2fe;
+.low-quality .map-duration, .low-quality .map-notes {
+    background: rgba(79, 172, 254, 0.05);
+    border-radius: 5px;
 }
 
 .map-footer {
@@ -660,6 +1533,28 @@ h1 {
     align-items: flex-start;
     gap: 12px;
     margin-top: 15px;
+}
+
+.map-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-start;
+    flex-basis: 0;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.map-tags span {
+    background-color: #333;
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 0.75em;
+    white-space: nowrap;
+}
+
+.low-quality .map-tags span {
+    border-radius: 6px;
 }
 
 .action-buttons {
@@ -769,6 +1664,25 @@ h1 {
     scrollbar-color: #555 #222;
 }
 
+.patterns-dropdown-menu ul::-webkit-scrollbar {
+    width: 6px;
+}
+
+.patterns-dropdown-menu ul::-webkit-scrollbar-track {
+    background: #222;
+    border-radius: 3px;
+}
+
+.patterns-dropdown-menu ul::-webkit-scrollbar-thumb {
+    background-color: #555;
+    border-radius: 3px;
+    border: 1px solid #222;
+}
+
+.patterns-dropdown-menu ul::-webkit-scrollbar-thumb:hover {
+    background-color: #666;
+}
+
 .patterns-dropdown-menu li {
     padding: 5px 10px;
     background-color: #333;
@@ -853,6 +1767,12 @@ h1 {
     background-color: #444;
 }
 
+.no-data {
+    color: #999;
+    font-size: 0.8em;
+    text-align: center;
+}
+
 #popup {
     position: fixed;
     top: 20px;
@@ -881,6 +1801,51 @@ h1 {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.map-stats {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 8px 0;
+}
+
+.map-stat-item {
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    border: none;
+    border-radius: 25px; 
+    padding: 6px 12px; 
+    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 0.85em;
+    color: white;
+}
+
+.low-quality .map-stat-item {
+    background: #1a1a1a;
+    box-shadow: none;
+    border-radius: 15px;
+    border: 1px solid rgba(79, 172, 254, 0.3);
+}
+
+.map-stat-item img {
+    height: 16px;
+    width: auto;
+    filter: drop-shadow(0 0 2px #fff);
+    vertical-align: middle;
+}
+
+.low-quality .map-stat-item img {
+    filter: none;
+}
+
+.map-stat-item span {
+    font-size: 1em;
+    color: #00f2fe;
 }
 
 .load-more-container {
@@ -955,26 +1920,15 @@ h1 {
 
 @media (max-width: 768px) {
     .header-container {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        position: relative;
-        min-height: 50px;
-        margin-bottom: 60px;
+        flex-direction: column;
+        gap: 15px;
     }
 
     .performance-toggle {
-        position: absolute;
-        top: -40px;
-        right: 50%;
-        transform: translateX(50%);
+        top: -30px;
+        right: 10px;
         font-size: 0.75em;
         padding: 6px 12px;
-    }
-
-    .header-button {
-        padding: 8px 15px;
-        font-size: 0.9em;
     }
 
     #search-container {
@@ -985,1050 +1939,4 @@ h1 {
     #search-bar {
         width: 90%;
         padding: 15px;
-    }
-
-    #filter-toggle, #sort-toggle {
-        padding: 12px 20px;
-        width: auto;
-    }
-
-    #filter-menu {
-        min-width: 280px;
-        max-width: calc(100vw - 40px);
-        left: 50%;
-        right: auto;
-        transform: translate(-50%, -50%);
-        position: fixed;
-        top: 50%;
-        max-height: 80vh;
-        overflow-y: auto;
-    }
-
-    .top-filters-row, .range-filters-container, .bottom-filters-grid {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    #map-list {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 15px;
-        padding: 0 10px;
-    }
-
-    .map-card {
-        padding: 15px;
-        min-height: 180px;
-    }
-
-    .new-tag {
-        font-size: 0.6em;
-        padding: 3px 25px;
-        top: 8px;
-        right: -22px;
-    }
-}
-</style>
-</head>
-<body>
-
-<div class="header-container">
-    <a href="/SoundSpaceCustoms/Info" class="header-button info-button">Info</a>
-    <button class="performance-toggle" id="performance-toggle">Low Quality Mode</button>
-    <a href="https://faworee.github.io/SoundSpaceCustoms/SubmitMaps" class="header-button discord-button">Submit Map</a>
-</div>
-
-<h1>Sound Space Custom Maps</h1>
-
-<div id="search-container">
-    <input type="text" id="search-bar" placeholder="Search maps, artists or mappers...">
-    
-    <div class="filter-dropdown">
-        <button id="filter-toggle">Filters</button>
-        <div id="filter-menu">
-            <div class="top-filters-row">
-                <div class="filter-section">
-                    <h3>Difficulty</h3>
-                    <div class="filter-buttons" id="difficulty-filters">
-                        <button class="filter-button" data-filter="Medium">Medium</button>
-                        <button class="filter-button" data-filter="Hard">Hard</button>
-                        <button class="filter-button" data-filter="Logic">Logic</button>
-                        <button class="filter-button" data-filter="Brrrr">Brrrr</button>
-                        <button class="filter-button" data-filter="Tasukete">Tasukete</button>
-                    </div>
-                </div>
-                
-                <div class="filter-section">
-                    <h3>Patterns</h3>
-                    <div class="filter-buttons" id="pattern-filters">
-                        <button class="filter-button" data-filter="Streams">Streams</button>
-                        <button class="filter-button" data-filter="Walls">Walls</button>
-                        <button class="filter-button" data-filter="Tech">Tech</button>
-                        <button class="filter-button" data-filter="Jumps">Jumps</button>
-                        <button class="filter-button" data-filter="Quantum">Quantum</button>
-                        <button class="filter-button" data-filter="Unconventional">Unconventional</button>
-                        <button class="filter-button" data-filter="Bursts">Bursts</button>
-                        <button class="filter-button" data-filter="Timing">Timing</button>
-                        <button class="filter-button" data-filter="Stacks">Stacks</button>
-                        <button class="filter-button" data-filter="Spins">Spins</button>
-                        <button class="filter-button" data-filter="Slides">Slides</button>
-                        <button class="filter-button" data-filter="Vibros">Vibros</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bottom-filters-grid">
-                <div class="filter-section">
-                    <h3>APM Music Filter</h3>
-                    <div class="apm-filter">
-                        <div class="apm-option">
-                            <input type="radio" id="apm-all" name="apm-filter" value="all" checked>
-                            <label for="apm-all">All maps (APM + Normal)</label>
-                        </div>
-                        <div class="apm-option">
-                            <input type="radio" id="apm-only" name="apm-filter" value="only">
-                            <label for="apm-only">Only APM Music maps</label>
-                        </div>
-                        <div class="apm-option">
-                            <input type="radio" id="apm-none" name="apm-filter" value="none">
-                            <label for="apm-none">No APM Music maps</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="filter-section">
-                    <h3>Other Filters</h3>
-                    <div class="other-filters">
-                        <div class="filter-option">
-                            <input type="checkbox" id="new-maps-only">
-                            <label for="new-maps-only">New Maps Only</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="filter-actions">
-                <button class="clear-filters">Clear All</button>
-                <button class="apply-filters">Apply Filters</button>
-            </div>
-        </div>
-    </div>
-
-    <button id="sort-toggle">Sort: Easy → Hard</button>
-</div>
-
-<div class="loading-spinner" id="loading-spinner"></div>
-<div id="map-list"></div>
-
-<div class="load-more-container" id="load-more-container">
-    <button id="load-more-btn" class="load-more-btn">Load More Maps</button>
-    <div class="scroll-indicator" id="scroll-indicator">Scroll down to auto-load more maps</div>
-</div>
-
-<div id="popup"></div>
-
-<script>
-// Global variables
-let isLowQualityMode = false;
-const difficultyOrder = ["Easy", "Medium", "Hard", "Logic", "Brrrr", "Tasukete"];
-let sortAscending = true;
-let maps = [];
-let filteredMaps = [];
-let selectedDifficulties = [];
-let selectedPatterns = [];
-let apmFilter = "all";
-let showNewMapsOnly = false;
-let currentDisplayCount = 50; // Show more maps initially for instant loading
-const LOAD_BATCH_SIZE = 30;
-let isLoading = false;
-
-// Simple cache for raw map data and star ratings
-const mapDataCache = new Map();
-const starRatingCache = new Map();
-
-// Rhythia API Integration using your proxy
-class RhythiaAPIClient {
-    constructor() {
-        this.apiUrl = "https://rhythiaproxy.onrender.com/proxy/getRawStarRating";
-        this.requestQueue = [];
-        this.isProcessing = false;
-        this.rateLimitDelay = 500; // 500ms between requests to avoid rate limiting
-    }
-    
-    async calculateStarRating(rawMapData) {
-        if (!rawMapData || typeof rawMapData !== 'string') {
-            return { error: "Invalid map data" };
-        }
-        
-        return new Promise((resolve) => {
-            this.requestQueue.push({ rawMapData, resolve });
-            this.processQueue();
-        });
-    }
-    
-    async processQueue() {
-        if (this.isProcessing || this.requestQueue.length === 0) return;
-        
-        this.isProcessing = true;
-        
-        while (this.requestQueue.length > 0) {
-            const { rawMapData, resolve } = this.requestQueue.shift();
-            
-            try {
-                const result = await this.makeAPIRequest(rawMapData);
-                resolve(result);
-            } catch (error) {
-                resolve({ error: error.message });
-            }
-            
-            // Rate limiting delay
-            if (this.requestQueue.length > 0) {
-                await new Promise(resolve => setTimeout(resolve, this.rateLimitDelay));
-            }
-        }
-        
-        this.isProcessing = false;
-    }
-    
-    async makeAPIRequest(rawMapData) {
-        const payload = {
-            rawMap: rawMapData,
-            session: ""
-        };
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-        
-        try {
-            const response = await fetch(this.apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            const beatmap = data.beatmap || {};
-            const starRating = parseFloat(beatmap.starRating) || 0.0;
-            
-            return {
-                starRating: parseFloat(starRating.toFixed(2)),
-                rp: beatmap.rp || {}
-            };
-            
-        } catch (error) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                throw new Error('Request timeout');
-            }
-            throw error;
-        }
-    }
-}
-
-const rhythiaAPI = new RhythiaAPIClient();
-
-// Star rating functions
-async function calculateStarRating(rawData) {
-    if (!rawData || typeof rawData !== 'string') return null;
-    
-    if (starRatingCache.has(rawData)) {
-        return starRatingCache.get(rawData);
-    }
-    
-    try {
-        const result = await rhythiaAPI.calculateStarRating(rawData);
-        
-        if (result.error) {
-            console.warn('Rhythia API error:', result.error);
-            return null;
-        }
-        
-        const starRating = result.starRating || 0;
-        starRatingCache.set(rawData, starRating);
-        return starRating;
-    } catch (error) {
-        console.error('Star rating calculation failed:', error);
-        return null;
-    }
-}
-
-function createStarRatingBox(starRating) {
-    const box = document.createElement('div');
-    box.className = 'star-rating-box';
-    
-    if (starRating === null) {
-        box.classList.add('calculating');
-        box.innerHTML = `
-            <span>...</span>
-            <svg class="star-icon" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-        `;
-    } else {
-        box.innerHTML = `
-            <span>${starRating}</span>
-            <svg class="star-icon" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-        `;
-    }
-    
-    return box;
-}
-
-function updateStarRatingBox(box, starRating) {
-    if (starRating === null) {
-        box.classList.remove('calculating');
-        box.classList.add('error');
-        box.innerHTML = `
-            <span>ERR</span>
-            <svg class="star-icon" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-        `;
-    } else {
-        box.classList.remove('calculating', 'error');
-        box.innerHTML = `
-            <span>${starRating}</span>
-            <svg class="star-icon" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-        `;
-    }
-}
-
-// DOM elements
-const searchBar = document.getElementById('search-bar');
-const mapList = document.getElementById('map-list');
-const sortToggle = document.getElementById('sort-toggle');
-const filterToggle = document.getElementById('filter-toggle');
-const filterMenu = document.getElementById('filter-menu');
-const popup = document.getElementById('popup');
-const loadingSpinner = document.getElementById('loading-spinner');
-const loadMoreBtn = document.getElementById('load-more-btn');
-const scrollIndicator = document.getElementById('scroll-indicator');
-const performanceToggle = document.getElementById('performance-toggle');
-
-// Filter inputs
-const newMapsCheckbox = document.getElementById('new-maps-only');
-
-// Performance toggle
-performanceToggle.addEventListener('click', () => {
-    isLowQualityMode = !isLowQualityMode;
-    document.body.classList.toggle('low-quality', isLowQualityMode);
-    performanceToggle.classList.toggle('active', isLowQualityMode);
-    performanceToggle.textContent = isLowQualityMode ? 'High Quality Mode' : 'Low Quality Mode';
-    
-    try {
-        localStorage.setItem('soundSpaceLowQuality', isLowQualityMode.toString());
-    } catch (e) {
-        console.warn('Could not save performance preference:', e);
-    }
-    
-    if (maps.length > 0) {
-        renderMaps();
-    }
-});
-
-// Load saved preference
-try {
-    const savedPreference = localStorage.getItem('soundSpaceLowQuality');
-    if (savedPreference === 'true') {
-        performanceToggle.click();
-    }
-} catch (e) {
-    console.warn('Could not load performance preference:', e);
-}
-
-// Utility functions
-function getRawUrl(url) {
-    if (url.includes('github.com')) {
-        let newUrl = url.replace('github.com', 'raw.githubusercontent.com');
-        newUrl = newUrl.replace('/blob/', '/').replace('/raw/', '/');
-        return newUrl;
-    }
-    if (url.includes('gitlab.com') && url.includes('/-/blob/')) {
-        return url.replace('/-/blob/', '/-/raw/');
-    }
-    return url;
-}
-
-async function fetchMapData(url) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-    
-    try {
-        const response = await fetch(url, {
-            signal: controller.signal,
-            cache: 'default'
-        });
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return await response.text();
-    } catch (error) {
-        clearTimeout(timeoutId);
-        return null;
-    }
-}
-
-// Utility functions for map data parsing
-function parseMapData(rawData) {
-    if (!rawData || typeof rawData !== 'string') {
-        return { duration: 0, noteCount: 0 };
-    }
-    
-    const firstCommaIndex = rawData.indexOf(',');
-    if (firstCommaIndex === -1) {
-        return { duration: 0, noteCount: 0 };
-    }
-    
-    const notesData = rawData.substring(firstCommaIndex + 1);
-    const noteArray = notesData.split(',');
-    const noteCount = noteArray.length;
-    
-    if (noteCount === 0) {
-        return { duration: 0, noteCount: 0 };
-    }
-    
-    try {
-        const firstNote = noteArray[0];
-        const firstNoteParts = firstNote.split('|');
-        const startTime = parseFloat(firstNoteParts[2]) || 0;
-        
-        const lastNote = noteArray[noteArray.length - 1];
-        const lastNoteParts = lastNote.split('|');
-        const endTime = parseFloat(lastNoteParts[2]) || 0;
-        
-        const durationMilliseconds = endTime - startTime;
-        return { duration: Math.max(0, durationMilliseconds), noteCount: noteCount };
-    } catch (error) {
-        console.warn('Error parsing map data:', error);
-        return { duration: 0, noteCount: noteCount };
-    }
-}
-
-function formatDuration(milliseconds) {
-    if (milliseconds <= 0 || isNaN(milliseconds)) return "--:--";
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-// Main data loading function with priority processing for visible maps
-async function loadMapDataFromJSON() {
-    try {
-        loadingSpinner.style.display = 'block';
-        const timestamp = Date.now();
-        const response = await fetch(`Mapdata.json?v=${timestamp}`, {
-            cache: 'no-cache',
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Failed to load map data: ${response.status} ${response.statusText}`);
-        }
-        
-        const mapData = await response.json();
-        
-        if (!Array.isArray(mapData)) {
-            throw new Error('Invalid JSON format: Expected an array of maps');
-        }
-        
-        // Create all map objects immediately for instant display
-        maps = mapData.map(mapArray => {
-            if (!Array.isArray(mapArray) || mapArray.length < 6) {
-                console.warn('Invalid map data format:', mapArray);
-                return null;
-            }
-            
-            const [link, mapName, artist, mapper, difficulty, patterns, isNew] = mapArray;
-            
-            return {
-                link: link,
-                mapName: mapName,
-                artist: artist,
-                mapper: mapper,
-                difficulty: difficulty,
-                patterns: patterns || [],
-                isNew: isNew || false,
-                duration: undefined,
-                noteCount: undefined,
-                starRating: null,
-                processed: false
-            };
-        }).filter(map => map !== null);
-        
-        if (maps.length === 0) {
-            throw new Error('No valid map data found');
-        }
-        
-        console.log(`Loaded ${maps.length} maps instantly!`);
-        
-        // Show maps immediately (they'll show with placeholder data)
-        filterAndRenderMaps();
-        loadingSpinner.style.display = 'none';
-        
-    } catch (error) {
-        console.error('Error loading map data:', error);
-        loadingSpinner.style.display = 'none';
-        mapList.innerHTML = `
-            <div class="error-message">
-                <h3>Failed to Load Map Data</h3>
-                <p>Error: ${error.message}</p>
-                <p>Please ensure that the "Mapdata.json" file exists and contains valid map data.</p>
-                <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #4facfe; color: white; border: none; border-radius: 5px; cursor: pointer;">Retry</button>
-            </div>
-        `;
-    }
-}
-
-// Process stats for currently visible/filtered maps only
-async function processVisibleMapStats() {
-    const visibleMaps = filteredMaps.slice(0, currentDisplayCount);
-    const unprocessedMaps = visibleMaps.filter(map => !map.processed);
-    
-    if (unprocessedMaps.length === 0) return;
-    
-    console.log(`Processing stats for ${unprocessedMaps.length} visible maps...`);
-    
-    // Process all visible maps in parallel for instant results
-    const promises = unprocessedMaps.map(async (mapObj) => {
-        const mapIndex = maps.findIndex(m => m.link === mapObj.link);
-        if (mapIndex === -1 || mapObj.processed) return;
-        
-        const rawLink = getRawUrl(mapObj.link);
-        
-        try {
-            let rawData = mapDataCache.get(rawLink);
-            if (!rawData) {
-                rawData = await fetchMapData(rawLink);
-                if (rawData) {
-                    mapDataCache.set(rawLink, rawData);
-                }
-            }
-            
-            if (rawData) {
-                const stats = parseMapData(rawData);
-                maps[mapIndex].duration = stats.duration;
-                maps[mapIndex].noteCount = stats.noteCount;
-                
-                // Calculate star rating using your proxy
-                const starRating = await calculateStarRating(rawData);
-                maps[mapIndex].starRating = starRating;
-                
-                maps[mapIndex].processed = true;
-                
-                // Update the card immediately
-                updateMapCardStats(mapIndex, stats, starRating);
-            }
-        } catch (error) {
-            console.error("Error processing visible map:", rawLink, error);
-        }
-    });
-    
-    await Promise.all(promises);
-    console.log('Finished processing visible maps');
-}
-
-// Update a specific map card's stats when they become available
-function updateMapCardStats(mapIndex, stats, starRating = null) {
-    const mapObj = maps[mapIndex];
-    const cards = document.querySelectorAll('.map-card');
-    
-    cards.forEach(card => {
-        const cardLink = card.querySelector('.map-name a')?.href;
-        if (cardLink === mapObj.link) {
-            // Update or add stats section
-            const existingStats = card.querySelector('.map-stats');
-            if (!existingStats) {
-                const mapStatsHtml = `
-                    <div class="map-stats">
-                        <div class="map-stat-item">
-                            <img src="https://i.imgur.com/lv0ynEi.png" alt="Timer Icon">
-                            <span>${formatDuration(stats.duration)}</span>
-                        </div>
-                        <div class="map-stat-item">
-                            <img src="https://i.imgur.com/7pfvgCl.png" alt="Notes Icon">
-                            <span>${stats.noteCount.toLocaleString()}</span>
-                        </div>
-                    </div>
-                `;
-                
-                const mapContent = card.querySelector('.map-content');
-                const mapFooter = card.querySelector('.map-footer');
-                if (mapContent && mapFooter) {
-                    mapFooter.insertAdjacentHTML('beforebegin', mapStatsHtml);
-                }
-            }
-            
-            // Update star rating box if it exists
-            const starRatingBox = card.querySelector('.star-rating-box');
-            if (starRatingBox && starRating !== null) {
-                updateStarRatingBox(starRatingBox, starRating);
-            }
-        }
-    });
-}
-
-// Map card creation with placeholder stats and star ratings that update dynamically
-function createMapCard(m) {
-    const card = document.createElement('div');
-    card.classList.add('map-card');
-    let mapDifficulty = m.difficulty.toLowerCase();
-    if (m.difficulty === "No Data") {
-        mapDifficulty = "brrrr";
-    }
-    card.classList.add(mapDifficulty);
-    
-    // Create star rating box
-    const starRatingBox = createStarRatingBox(m.starRating);
-    
-    let newTagHtml = '';
-    if (m.isNew) {
-        newTagHtml = '<div class="new-tag">NEW</div>';
-    }
-    
-    // Show stats if available, placeholder if not
-    let mapStatsHtml = '';
-    if (m.duration !== undefined && m.noteCount !== undefined) {
-        mapStatsHtml = `
-            <div class="map-stats">
-                <div class="map-stat-item">
-                    <img src="https://i.imgur.com/lv0ynEi.png" alt="Timer Icon">
-                    <span>${formatDuration(m.duration)}</span>
-                </div>
-                <div class="map-stat-item">
-                    <img src="https://i.imgur.com/7pfvgCl.png" alt="Notes Icon">
-                    <span>${m.noteCount.toLocaleString()}</span>
-                </div>
-            </div>
-        `;
-    }
-    
-    let patternsHtml = '';
-    if (m.patterns && m.patterns.length > 0) {
-        const patternListHtml = m.patterns.map(p => {
-            const patternName = p === "No Data" ? "No Pattern Data" : p;
-            return `<li>${patternName}</li>`;
-        }).join('');
-        patternsHtml = `
-            <div class="patterns-dropdown-container">
-                <button class="patterns-dropdown-toggle" onclick="togglePatternsDropdown(this)">Show Patterns</button>
-                <div class="patterns-dropdown-menu">
-                    <ul>${patternListHtml}</ul>
-                </div>
-            </div>
-        `;
-    } else {
-        patternsHtml = `
-            <div class="patterns-dropdown-container">
-                <button class="patterns-dropdown-toggle no-click">No Patterns</button>
-            </div>
-        `;
-    }
-    
-    const escapedLink = m.link.replace(/'/g, "\\'");
-    card.innerHTML = `
-        ${newTagHtml}
-        <div class="map-content">
-            <div class="map-artist">${m.artist}</div>
-            <div class="map-name"><a href="${m.link}" target="_blank" rel="noopener">${m.mapName}</a></div>
-            <div class="map-mapper">Mapped by: ${m.mapper}</div>
-            <div class="map-difficulty">Difficulty: ${m.difficulty}</div>
-            ${mapStatsHtml}
-        </div>
-        <div class="map-footer">
-            ${patternsHtml}
-            <div class="action-buttons">
-                <button class="copy-btn" onclick="copyLink('${escapedLink}', this)">Copy Link</button>
-                <div class="action-dropdown">
-                    <button class="action-dropdown-toggle" onclick="toggleActionDropdown(this)">&#x22EE;</button>
-                    <div class="action-dropdown-menu">
-                        <a href="#" class="dropdown-item" onclick="copyRawData('${escapedLink}')">Copy Raw</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Add star rating box
-    card.appendChild(starRatingBox);
-    
-    return card;
-}
-
-function isApmMap(artist) {
-    return artist.toLowerCase().includes('apm music');
-}
-
-function showPopup(message, isError = false) {
-    popup.textContent = message;
-    popup.style.backgroundColor = isError ? "#dc3545" : "#28a745";
-    popup.style.display = "block";
-    setTimeout(() => {
-        popup.style.display = "none";
-    }, 2500);
-}
-
-// Filter and render functions
-function filterAndRenderMaps() {
-    const searchText = searchBar.value.toLowerCase();
-    
-    filteredMaps = maps.filter(m => {
-        const matchesSearch = m.mapName.toLowerCase().includes(searchText) || 
-                            m.artist.toLowerCase().includes(searchText) || 
-                            m.mapper.toLowerCase().includes(searchText);
-        const matchesDifficulty = selectedDifficulties.length === 0 || selectedDifficulties.includes(m.difficulty);
-        const matchesPatterns = selectedPatterns.length === 0 || selectedPatterns.every(pattern => m.patterns.includes(pattern));
-        
-        const isApm = isApmMap(m.artist);
-        let matchesApm = true;
-        if (apmFilter === "only") {
-            matchesApm = isApm;
-        } else if (apmFilter === "none") {
-            matchesApm = !isApm;
-        }
-
-        const matchesNewFilter = !showNewMapsOnly || m.isNew;
-
-        return matchesSearch && matchesDifficulty && matchesPatterns && matchesApm && matchesNewFilter;
-    });
-
-    filteredMaps.sort((a, b) => {
-        const diffA = difficultyOrder.indexOf(a.difficulty);
-        const diffB = difficultyOrder.indexOf(b.difficulty);
-        const safeA = diffA === -1 ? difficultyOrder.length : diffA;
-        const safeB = diffB === -1 ? difficultyOrder.length : diffB;
-        const difficultyComparison = sortAscending ? safeA - safeB : safeB - safeA;
-        if (difficultyComparison !== 0) {
-            return difficultyComparison;
-        }
-        if (a.isNew !== b.isNew) {
-            return a.isNew ? -1 : 1;
-        }
-        const artistComparison = a.artist.localeCompare(b.artist);
-        if (artistComparison !== 0) {
-            return artistComparison;
-        }
-        const mapNameComparison = a.mapName.localeCompare(b.mapName);
-        if (mapNameComparison !== 0) {
-            return mapNameComparison;
-        }
-        return a.mapper.localeCompare(b.mapper);
-    });
-
-    renderMaps();
-}
-
-function renderMaps() {
-    mapList.innerHTML = "";
-    const itemsToShow = Math.min(filteredMaps.length, currentDisplayCount);
-    const fragment = document.createDocumentFragment();
-    
-    // Render in batches to avoid blocking
-    const RENDER_BATCH_SIZE = 20;
-    let renderIndex = 0;
-    
-    function renderBatch() {
-        const batchEnd = Math.min(renderIndex + RENDER_BATCH_SIZE, itemsToShow);
-        
-        for (let i = renderIndex; i < batchEnd; i++) {
-            const m = filteredMaps[i];
-            const card = createMapCard(m);
-            fragment.appendChild(card);
-        }
-        
-        renderIndex = batchEnd;
-        
-        if (renderIndex < itemsToShow) {
-            requestAnimationFrame(renderBatch);
-        } else {
-            mapList.appendChild(fragment);
-            updateLoadMoreButton();
-            
-            // Process stats for the newly rendered visible maps
-            processVisibleMapStats();
-        }
-    }
-    
-    renderBatch();
-}
-
-function updateLoadMoreButton() {
-    const remainingMaps = filteredMaps.length - currentDisplayCount;
-    
-    if (remainingMaps <= 0) {
-        loadMoreBtn.style.display = 'none';
-        scrollIndicator.textContent = `All ${filteredMaps.length} maps loaded`;
-    } else {
-        loadMoreBtn.style.display = 'block';
-        loadMoreBtn.disabled = false;
-        const batchSize = LOAD_BATCH_SIZE;
-        loadMoreBtn.textContent = `Load ${Math.min(batchSize, remainingMaps)} More Maps`;
-        scrollIndicator.textContent = `${remainingMaps} maps remaining - Scroll to auto-load`;
-    }
-}
-
-function loadMoreMaps() {
-    if (isLoading || currentDisplayCount >= filteredMaps.length) return;
-    
-    isLoading = true;
-    loadMoreBtn.disabled = true;
-    loadMoreBtn.textContent = 'Loading...';
-    
-    requestAnimationFrame(() => {
-        const previousCount = currentDisplayCount;
-        const newDisplayCount = Math.min(currentDisplayCount + LOAD_BATCH_SIZE, filteredMaps.length);
-        currentDisplayCount = newDisplayCount;
-        
-        const fragment = document.createDocumentFragment();
-        for (let i = previousCount; i < currentDisplayCount; i++) {
-            const m = filteredMaps[i];
-            const card = createMapCard(m);
-            fragment.appendChild(card);
-        }
-        mapList.appendChild(fragment);
-        
-        updateLoadMoreButton();
-        isLoading = false;
-        
-        // Process stats for newly loaded maps
-        processVisibleMapStats();
-    });
-}
-
-// Action functions
-function copyLink(link, button) {
-    navigator.clipboard.writeText(link).then(() => {
-        button.classList.add("copied");
-        button.textContent = "Copied!";
-        showPopup("Link copied!", false);
-        setTimeout(() => {
-            button.classList.remove("copied");
-            button.textContent = "Copy Link";
-        }, 1000);
-    }).catch(err => {
-        showPopup("Failed to copy link.", true);
-        console.error('Failed to copy link:', err);
-    });
-}
-
-async function copyRawData(link) {
-    try {
-        let rawContent = mapDataCache.get(link);
-        if (!rawContent) {
-            const rawLink = getRawUrl(link);
-            rawContent = await fetchMapData(rawLink);
-            if (rawContent) {
-                mapDataCache.set(rawLink, rawContent);
-            }
-        }
-        
-        if (rawContent) {
-            navigator.clipboard.writeText(rawContent).then(() => {
-                showPopup("Raw data copied!", false);
-            }).catch(() => {
-                showPopup("Failed to copy raw data.", true);
-            });
-        } else {
-            showPopup("Failed to fetch raw data.", true);
-        }
-    } catch (error) {
-        showPopup("Failed to copy raw data.", true);
-        console.error('Failed to fetch or copy raw data:', error);
-    }
-}
-
-function togglePatternsDropdown(button) {
-    if (button.classList.contains('no-click')) {
-        return;
-    }
-    
-    const dropdownMenu = button.nextElementSibling;
-    dropdownMenu.classList.toggle('show');
-    const allMenus = document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu');
-    allMenus.forEach(menu => {
-        if (menu !== dropdownMenu) {
-            menu.classList.remove('show');
-        }
-    });
-}
-
-function toggleActionDropdown(button) {
-    const dropdownMenu = button.nextElementSibling;
-    dropdownMenu.classList.toggle('show');
-    const allMenus = document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu');
-    allMenus.forEach(menu => {
-        if (menu !== dropdownMenu) {
-            menu.classList.remove('show');
-        }
-    });
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Event listeners
-let searchTimeout;
-searchBar.addEventListener('input', () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        currentDisplayCount = 50;
-        filterAndRenderMaps();
-    }, 300);
-});
-
-filterToggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    filterMenu.classList.toggle('show');
-});
-
-document.addEventListener('click', (e) => {
-    if (!filterToggle.contains(e.target) && !filterMenu.contains(e.target)) {
-        filterMenu.classList.remove('show');
-    }
-});
-
-sortToggle.addEventListener('click', () => {
-    sortAscending = !sortAscending;
-    sortToggle.textContent = sortAscending ? "Sort: Easy → Hard" : "Sort: Hard → Easy";
-    currentDisplayCount = 50;
-    filterAndRenderMaps();
-});
-
-newMapsCheckbox.addEventListener('change', () => {
-    showNewMapsOnly = newMapsCheckbox.checked;
-    currentDisplayCount = 50;
-    filterAndRenderMaps();
-});
-
-document.querySelectorAll('#difficulty-filters .filter-button').forEach(button => {
-    button.addEventListener('click', () => {
-        const difficulty = button.dataset.filter;
-        button.classList.toggle('active');
-        if (button.classList.contains('active')) {
-            if (!selectedDifficulties.includes(difficulty)) {
-                selectedDifficulties.push(difficulty);
-            }
-        } else {
-            selectedDifficulties = selectedDifficulties.filter(d => d !== difficulty);
-        }
-        currentDisplayCount = 50;
-        filterAndRenderMaps();
-    });
-});
-
-document.querySelectorAll('#pattern-filters .filter-button').forEach(button => {
-    button.addEventListener('click', () => {
-        const pattern = button.dataset.filter;
-        button.classList.toggle('active');
-        if (button.classList.contains('active')) {
-            if (!selectedPatterns.includes(pattern)) {
-                selectedPatterns.push(pattern);
-            }
-        } else {
-            selectedPatterns = selectedPatterns.filter(p => p !== pattern);
-        }
-        currentDisplayCount = 50;
-        filterAndRenderMaps();
-    });
-});
-
-document.querySelectorAll('input[name="apm-filter"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-        apmFilter = radio.value;
-        currentDisplayCount = 50;
-        filterAndRenderMaps();
-    });
-});
-
-document.querySelector('.clear-filters').addEventListener('click', () => {
-    selectedDifficulties = [];
-    selectedPatterns = [];
-    apmFilter = "all";
-    showNewMapsOnly = false;
-    document.querySelectorAll('.filter-button.active').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.getElementById('apm-all').checked = true;
-    newMapsCheckbox.checked = false;
-    currentDisplayCount = 50;
-    filterAndRenderMaps();
-});
-
-document.querySelector('.apply-filters').addEventListener('click', () => {
-    currentDisplayCount = 50;
-    filterAndRenderMaps();
-    filterMenu.classList.remove('show');
-});
-
-loadMoreBtn.addEventListener('click', () => {
-    if (!isLoading) {
-        loadMoreMaps();
-    }
-});
-
-// Scroll handling
-let scrollTimeout;
-function checkScroll() {
-    if (scrollTimeout) return;
-    
-    scrollTimeout = setTimeout(() => {
-        if (isLoading) {
-            scrollTimeout = null;
-            return;
-        }
-        
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        const windowHeight = window.innerHeight;
-        const documentHeight = document.documentElement.scrollHeight;
-        
-        if (scrollTop + windowHeight >= documentHeight - 200) {
-            loadMoreMaps();
-        }
-        scrollTimeout = null;
-    }, 100);
-}
-
-window.addEventListener('scroll', checkScroll, { passive: true });
-
-// Click outside handler for dropdowns
-document.addEventListener('click', (event) => {
-    if (!event.target.closest('.patterns-dropdown-container') && !event.target.closest('.action-dropdown')) {
-        document.querySelectorAll('.patterns-dropdown-menu, .action-dropdown-menu').forEach(menu => {
-            menu.classList.remove('show');
-        });
-    }
-});
-
-// Initialize on page load
-document.addEventListener("DOMContentLoaded", () => {
-    loadMapDataFromJSON();
-});
-</script>
-</body>
-</html>
+    }}
