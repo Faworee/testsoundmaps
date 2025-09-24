@@ -407,10 +407,10 @@ h1 {
 }
 
 .slider-container {
-    width: 100%;
+    width: 75%;
     max-width: 200px;
     margin: 10px auto;
-    position: relative;
+    position: Center;
 }
 
 .dual-range-slider {
@@ -1434,7 +1434,7 @@ h1 {
 class MapDataManager {
     constructor() {
         this.mapDataCache = new Map();
-        this.batchSize = 50;
+        this.batchSize = 175;
         this.retryAttempts = 3;
         this.retryDelay = 1000;
         this.loadingProgress = { loaded: 0, total: 0 };
@@ -1718,7 +1718,7 @@ let selectedPatterns = [];
 let apmFilter = "all";
 let showNewMapsOnly = false;
 let currentDisplayCount = 50;
-const LOAD_BATCH_SIZE = 200;
+const LOAD_BATCH_SIZE = 100;
 let isLoading = false;
 let infiniteScrollEnabled = true;
 let durationRange = { min: 0, max: 600000 };
