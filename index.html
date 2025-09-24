@@ -2498,9 +2498,6 @@ document.addEventListener('touchstart', (e) => {
         mapList.appendChild(fragment);
         updateLoadMoreButton();
         loadingSpinner.style.display = 'none';
-        if (!isLowQualityMode) {
-            setTimeout(() => loadStatsForVisibleMaps(), 100);
-        }
     }
 
     function createMapCard(m) {
