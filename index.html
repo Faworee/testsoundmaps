@@ -1431,459 +1431,127 @@ h1 {
 <div id="popup"></div>
 
 <script>
-    let isLowQualityMode = false;
-    const difficultyOrder = ["Easy", "Medium", "Hard", "Logic", "Brrrr", "Tasukete"];
-    let sortAscending = true;
-    let starSortDescending = true;
-    let sortMode = 'difficulty'; 
-    let maps = [];
-    let filteredMaps = [];
-    let selectedDifficulties = [];
-    let selectedPatterns = [];
-    let apmFilter = "all";
-    let showNewMapsOnly = false;
-    let currentDisplayCount = 50;
-    const LOAD_BATCH_SIZE = 200;
-    let isLoading = false;
-    let infiniteScrollEnabled = true;
-    
-    // Slider variables
-    let durationRange = { min: 0, max: 600000 };
-    let notesRange = { min: 0, max: 10000 };
-    let currentDurationRange = { min: 0, max: 600000 };
-    let currentNotesRange = { min: 0, max: 10000 };
-    
-    const mapDataCache = new Map();
-    
-    const searchBar = document.getElementById('search-bar');
-    const mapList = document.getElementById('map-list');
-    const sortToggle = document.getElementById('sort-toggle');
-    const starSortToggle = document.getElementById('star-sort-toggle');
-    const filterToggle = document.getElementById('filter-toggle');
-    const filterMenu = document.getElementById('filter-menu');
-    const popup = document.getElementById('popup');
-    const loadingSpinner = document.getElementById('loading-spinner');
-    const loadMoreBtn = document.getElementById('load-more-btn');
-    const loadMoreContainer = document.getElementById('load-more-container');
-    const scrollIndicator = document.getElementById('scroll-indicator');
-    const performanceToggle = document.getElementById('performance-toggle');
-    const newMapsCheckbox = document.getElementById('new-maps-only');
+class MapDataManager {
+    constructor() {
+        this.mapDataCache = new Map();
+        this.batchSize = 50;
+        this.retryAttempts = 3;
+        this.retryDelay = 1000;
+        this.loadingProgress = { loaded: 0, total: 0 };
+    }
 
-    // Slider elements
-    const durationMinThumb = document.getElementById('duration-min-thumb');
-    const durationMaxThumb = document.getElementById('duration-max-thumb');
-    const durationMinInput = document.getElementById('duration-min-input');
-    const durationMaxInput = document.getElementById('duration-max-input');
-    const durationTrack = document.getElementById('duration-track');
-    
-    const notesMinThumb = document.getElementById('notes-min-thumb');
-    const notesMaxThumb = document.getElementById('notes-max-thumb');
-    const notesMinInput = document.getElementById('notes-min-input');
-    const notesMaxInput = document.getElementById('notes-max-input');
-    const notesTrack = document.getElementById('notes-track');
+    async loadAllMapData(maps) {
+        console.log(`Starting batch load of ${maps.length} maps...`);
+        this.loadingProgress.total = maps.length;
+        this.loadingProgress.loaded = 0;
+        
+        this.showLoadingProgress();
+        
+        const batches = this.createBatches(maps, this.batchSize);
+        
+        for (let i = 0; i < batches.length; i++) {
+            const batch = batches[i];
+            console.log(`Processing batch ${i + 1}/${batches.length}`);
+            
+            const batchPromises = batch.map(map => this.loadMapStats(map));
+            await Promise.allSettled(batchPromises);
+            
+            this.updateLoadingProgress();
+            
+            if (i < batches.length - 1) {
+                await this.delay(200);
+            }
+        }
+        
+        this.hideLoadingProgress();
+        console.log('Batch loading completed!');
+        
+        this.updateSliderRanges(maps);
+        
+        return maps;
+    }
 
-    // Performance toggle
-    performanceToggle.addEventListener('click', () => {
-        isLowQualityMode = !isLowQualityMode;
-        document.body.classList.toggle('low-quality', isLowQualityMode);
-        performanceToggle.classList.toggle('active', isLowQualityMode);
-        performanceToggle.textContent = isLowQualityMode ? 'High Quality Mode' : 'Low Quality Mode';
+    createBatches(array, batchSize) {
+        const batches = [];
+        for (let i = 0; i < array.length; i += batchSize) {
+            batches.push(array.slice(i, i + batchSize));
+        }
+        return batches;
+    }
+
+    async loadMapStats(map) {
+        if (map.statsLoaded) {
+            this.loadingProgress.loaded++;
+            return map;
+        }
+
+        const rawLink = this.getRawUrl(map.link);
         
         try {
-            localStorage.setItem('soundSpaceLowQuality', isLowQualityMode.toString());
-        } catch (e) {}
-        
-        if (maps.length > 0) {
-            renderMaps();
-        }
-    });
-
-    try {
-        const savedPreference = localStorage.getItem('soundSpaceLowQuality');
-        if (savedPreference === 'true') {
-            performanceToggle.click();
-        }
-    } catch (e) {}
-
-    // Slider functionality
-    function initSliders() {
-        initDurationSlider();
-        initNotesSlider();
-    }
-
-    function initDurationSlider() {
-        let isDragging = false;
-        let currentThumb = null;
-        
-        function updateDurationSlider() {
-            const minPercent = (currentDurationRange.min / durationRange.max) * 100;
-            const maxPercent = (currentDurationRange.max / durationRange.max) * 100;
+            let rawData = this.mapDataCache.get(rawLink);
             
-            durationMinThumb.style.left = minPercent + '%';
-            durationMaxThumb.style.left = maxPercent + '%';
-            durationTrack.style.left = minPercent + '%';
-            durationTrack.style.width = (maxPercent - minPercent) + '%';
+            if (!rawData) {
+                rawData = await this.fetchWithRetry(rawLink);
+                if (rawData) {
+                    this.mapDataCache.set(rawLink, rawData);
+                }
+            }
             
-            durationMinInput.value = formatDuration(currentDurationRange.min);
-            durationMaxInput.value = formatDuration(currentDurationRange.max);
-        }
-        
-        function handleDurationMouseDown(e, thumb) {
-            e.preventDefault();
-            e.stopPropagation();
-            isDragging = true;
-            currentThumb = thumb;
-            thumb.classList.add('active');
-            document.addEventListener('mousemove', handleDurationMouseMove);
-            document.addEventListener('mouseup', handleDurationMouseUp);
-        }
-        
-        function handleDurationMouseMove(e) {
-            if (!isDragging || !currentThumb) return;
-            e.preventDefault();
-            
-            const slider = currentThumb.parentElement;
-            const rect = slider.getBoundingClientRect();
-            const percent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-            const value = (percent / 100) * durationRange.max;
-            
-            if (currentThumb === durationMinThumb) {
-                currentDurationRange.min = Math.max(0, Math.min(value, currentDurationRange.max - 1000));
+            if (rawData) {
+                const stats = this.parseMapData(rawData);
+                map.duration = stats.duration;
+                map.noteCount = stats.noteCount;
+                map.statsLoaded = true;
             } else {
-                currentDurationRange.max = Math.min(durationRange.max, Math.max(value, currentDurationRange.min + 1000));
+                map.duration = 0;
+                map.noteCount = 0;
+                map.statsLoaded = true;
             }
-            
-            updateDurationSlider();
-            debounceFilterUpdate();
+        } catch (error) {
+            console.warn(`Failed to load stats for ${map.mapName}:`, error.message);
+            map.duration = 0;
+            map.noteCount = 0;
+            map.statsLoaded = true;
         }
         
-        function handleDurationMouseUp() {
-            if (isDragging && currentThumb) {
-                currentThumb.classList.remove('active');
-                isDragging = false;
-                currentThumb = null;
-                document.removeEventListener('mousemove', handleDurationMouseMove);
-                document.removeEventListener('mouseup', handleDurationMouseUp);
-            }
-        }
-        
-        durationMinThumb.addEventListener('mousedown', (e) => handleDurationMouseDown(e, durationMinThumb));
-        durationMaxThumb.addEventListener('mousedown', (e) => handleDurationMouseDown(e, durationMaxThumb));
-        
-        // Touch events for mobile
-        durationMinThumb.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleDurationMouseDown(e.touches[0], durationMinThumb);
-        });
-        durationMaxThumb.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleDurationMouseDown(e.touches[0], durationMaxThumb);
-        });
-        
-        document.addEventListener('touchmove', (e) => {
-            if (isDragging) {
-                handleDurationMouseMove(e.touches[0]);
-            }
-        });
-        
-        document.addEventListener('touchend', handleDurationMouseUp);
-        
-        // Input handlers
-        durationMinInput.addEventListener('input', () => {
-            const ms = parseTimeToMilliseconds(durationMinInput.value);
-            if (ms !== null && ms >= 0 && ms <= durationRange.max) {
-                currentDurationRange.min = Math.min(ms, currentDurationRange.max - 1000);
-                updateDurationSlider();
-                debounceFilterUpdate();
-            }
-        });
-        
-        durationMaxInput.addEventListener('input', () => {
-            const ms = parseTimeToMilliseconds(durationMaxInput.value);
-            if (ms !== null && ms >= 0 && ms <= durationRange.max) {
-                currentDurationRange.max = Math.max(ms, currentDurationRange.min + 1000);
-                updateDurationSlider();
-                debounceFilterUpdate();
-            }
-        });
-        
-        updateDurationSlider();
+        this.loadingProgress.loaded++;
+        return map;
     }
 
-    function initNotesSlider() {
-        let isDragging = false;
-        let currentThumb = null;
+    async fetchWithRetry(url, attempt = 1) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
         
-        function updateNotesSlider() {
-            const minPercent = (currentNotesRange.min / notesRange.max) * 100;
-            const maxPercent = (currentNotesRange.max / notesRange.max) * 100;
-            
-            notesMinThumb.style.left = minPercent + '%';
-            notesMaxThumb.style.left = maxPercent + '%';
-            notesTrack.style.left = minPercent + '%';
-            notesTrack.style.width = (maxPercent - minPercent) + '%';
-            
-            notesMinInput.value = Math.round(currentNotesRange.min);
-            notesMaxInput.value = Math.round(currentNotesRange.max);
-        }
-        
-        function handleNotesMouseDown(e, thumb) {
-            e.preventDefault();
-            e.stopPropagation();
-            isDragging = true;
-            currentThumb = thumb;
-            thumb.classList.add('active');
-            document.addEventListener('mousemove', handleNotesMouseMove);
-            document.addEventListener('mouseup', handleNotesMouseUp);
-        }
-        
-        function handleNotesMouseMove(e) {
-            if (!isDragging || !currentThumb) return;
-            e.preventDefault();
-            
-            const slider = currentThumb.parentElement;
-            const rect = slider.getBoundingClientRect();
-            const percent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-            const value = (percent / 100) * notesRange.max;
-            
-            if (currentThumb === notesMinThumb) {
-                currentNotesRange.min = Math.max(0, Math.min(value, currentNotesRange.max - 10));
-            } else {
-                currentNotesRange.max = Math.min(notesRange.max, Math.max(value, currentNotesRange.min + 10));
-            }
-            
-            updateNotesSlider();
-            debounceFilterUpdate();
-        }
-        
-        function handleNotesMouseUp() {
-            if (isDragging && currentThumb) {
-                currentThumb.classList.remove('active');
-                isDragging = false;
-                currentThumb = null;
-                document.removeEventListener('mousemove', handleNotesMouseMove);
-                document.removeEventListener('mouseup', handleNotesMouseUp);
-            }
-        }
-        
-        notesMinThumb.addEventListener('mousedown', (e) => handleNotesMouseDown(e, notesMinThumb));
-        notesMaxThumb.addEventListener('mousedown', (e) => handleNotesMouseDown(e, notesMaxThumb));
-        
-        // Touch events for mobile
-        notesMinThumb.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleNotesMouseDown(e.touches[0], notesMinThumb);
-        });
-        notesMaxThumb.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleNotesMouseDown(e.touches[0], notesMaxThumb);
-        });
-        
-        document.addEventListener('touchmove', (e) => {
-            if (isDragging) {
-                handleNotesMouseMove(e.touches[0]);
-            }
-        });
-        
-        document.addEventListener('touchend', handleNotesMouseUp);
-        
-        // Input handlers
-        notesMinInput.addEventListener('input', () => {
-            const value = parseInt(notesMinInput.value) || 0;
-            if (value >= 0 && value <= notesRange.max) {
-                currentNotesRange.min = Math.min(value, currentNotesRange.max - 10);
-                updateNotesSlider();
-                debounceFilterUpdate();
-            }
-        });
-        
-        notesMaxInput.addEventListener('input', () => {
-            const value = parseInt(notesMaxInput.value) || notesRange.max;
-            if (value >= 0 && value <= notesRange.max) {
-                currentNotesRange.max = Math.max(value, currentNotesRange.min + 10);
-                updateNotesSlider();
-                debounceFilterUpdate();
-            }
-        });
-        
-        updateNotesSlider();
-    }
-
-    let filterUpdateTimeout;
-    function debounceFilterUpdate() {
-        clearTimeout(filterUpdateTimeout);
-        filterUpdateTimeout = setTimeout(() => {
-            const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-            currentDisplayCount = batchSize;
-            filterAndRenderMaps();
-        }, 300);
-    }
-
-    function formatArtistName(artistName) {
-        // Add spaces before capital letters (except the first one)
-        return artistName.replace(/([a-z])([A-Z])/g, '$1 $2');
-    }
-
-    function createStarRating(starRating) {
-        if (starRating === null || starRating === undefined) {
-            return '<span class="star-rating loading">Loading...</span>';
-        }
-        
-        const numRating = parseFloat(starRating);
-        if (isNaN(numRating)) {
-            return '<span class="star-rating">★ 0.00</span>';
-        }
-        
-        return `<span class="star-rating">★ ${numRating.toFixed(2)}</span>`;
-    }
-
-    async function loadMapDataFromJSON() {
         try {
-            loadingSpinner.style.display = 'block';
-            const timestamp = Date.now();
-            const response = await fetch(`Mapdata.json?v=${timestamp}`, {
-                cache: 'no-cache',
+            const response = await fetch(url, {
+                signal: controller.signal,
+                cache: 'default',
                 headers: {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
+                    'Accept': 'text/plain, */*',
                 }
             });
             
+            clearTimeout(timeoutId);
+            
             if (!response.ok) {
-                throw new Error(`Failed to load map data: ${response.status} ${response.statusText}`);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
-            const mapData = await response.json();
-            
-            if (!Array.isArray(mapData)) {
-                throw new Error('Invalid JSON format: Expected an array of maps');
-            }
-
-            maps = mapData.map(mapArray => {
-                if (!Array.isArray(mapArray) || mapArray.length < 7) {
-                    return null;
-                }
-                
-                const [link, mapName, artist, mapper, difficulty, patterns, isNew, starRating] = mapArray;
-                
-                return {
-                    link: link,
-                    mapName: mapName,
-                    artist: artist,
-                    mapper: mapper,
-                    difficulty: difficulty,
-                    patterns: patterns,
-                    isNew: isNew || false,
-                    starRating: starRating ? parseFloat(starRating) : null,
-                    duration: undefined,
-                    noteCount: undefined,
-                    statsLoaded: false
-                };
-            }).filter(map => map !== null);
-            
-            if (maps.length === 0) {
-                throw new Error('No valid map data found');
-            }
-            
-            // Initialize sliders after loading data
-            initSliders();
-            filterAndRenderMaps();
-            loadStatsForVisibleMaps();
-            
+            return await response.text();
         } catch (error) {
-            loadingSpinner.style.display = 'none';
-            mapList.innerHTML = `
-                <div class="error-message">
-                    <h3>Failed to Load Map Data</h3>
-                    <p>Error: ${error.message}</p>
-                    <p>Please ensure that:</p>
-                    <ul style="text-align: left; display: inline-block;">
-                        <li>The file "Mapdata.json" exists in the same directory</li>
-                        <li>The JSON file contains valid map data in the correct format</li>
-                        <li>Your web server allows loading local JSON files</li>
-                    </ul>
-                    <p>If running locally, you may need to serve this through a web server rather than opening the HTML file directly.</p>
-                    <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #4facfe; color: white; border: none; border-radius: 5px; cursor: pointer;">Retry</button>
-                </div>
-            `;
+            clearTimeout(timeoutId);
+            
+            if (attempt < this.retryAttempts && !controller.signal.aborted) {
+                console.warn(`Retry ${attempt}/${this.retryAttempts} for ${url}: ${error.message}`);
+                await this.delay(this.retryDelay * attempt);
+                return this.fetchWithRetry(url, attempt + 1);
+            }
+            
+            throw error;
         }
     }
 
-   async function loadStatsForAllMaps() {
-    if (isLowQualityMode) return;
-    
-    const mapsToLoad = maps.filter(map => !map.statsLoaded);
-
-    for (const map of mapsToLoad) {
-        const rawLink = getRawUrl(map.link);
-
-        try {
-            let rawData = mapDataCache.get(rawLink);
-            if (!rawData) {
-                rawData = await fetchMapData(rawLink);
-                if (rawData) {
-                    mapDataCache.set(rawLink, rawData);
-                }
-            }
-
-            if (rawData) {
-                const stats = parseMapData(rawData);
-                map.duration = stats.duration;
-                map.noteCount = stats.noteCount;
-                map.statsLoaded = true;
-                updateMapCard(map);
-            }
-        } catch (error) {}
-    }
-}
-
-    
-    for (const map of mapsToLoad) {
-        const rawLink = getRawUrl(map.link);
-        
-        try {
-            let rawData = mapDataCache.get(rawLink);
-            if (!rawData) {
-                rawData = await fetchMapData(rawLink);
-                if (rawData) {
-                    mapDataCache.set(rawLink, rawData);
-                }
-            }
-            
-            if (rawData) {
-                const stats = parseMapData(rawData);
-                map.duration = stats.duration;
-                map.noteCount = stats.noteCount;
-                map.statsLoaded = true;
-                updateMapCard(map);
-            }
-        } catch (error) {}
-    }
-}
-
-    function updateMapCard(map) {
-        const cards = document.querySelectorAll('.map-card');
-        cards.forEach(card => {
-            const link = card.querySelector('.map-name a').href;
-            if (link === map.link) {
-                const statsElement = card.querySelector('.map-stats');
-                if (statsElement && map.duration !== undefined && map.noteCount !== undefined) {
-                    statsElement.innerHTML = `
-                        <div class="map-stat-item">
-                            <img src="Clock.png" alt="Timer Icon">
-                            <span>${formatDuration(map.duration)}</span>
-                        </div>
-                        <div class="map-stat-item">
-                            <img src="Note.png" alt="Notes Icon">
-                            <span>${map.noteCount.toLocaleString()}</span>
-                        </div>
-                    `;
-                }
-            }
-        });
-    }
-
-    function parseMapData(rawData) {
+    parseMapData(rawData) {
         if (!rawData || typeof rawData !== 'string') {
             return { duration: 0, noteCount: 0 };
         }
@@ -1910,139 +1578,670 @@ h1 {
             const lastNoteParts = lastNote.split('|');
             const endTime = parseFloat(lastNoteParts[2]) || 0;
             
-            const durationMilliseconds = endTime - startTime;
-            return { duration: Math.max(0, durationMilliseconds), noteCount: noteCount };
+            const durationMilliseconds = Math.max(0, endTime - startTime);
+            return { duration: durationMilliseconds, noteCount: noteCount };
         } catch (error) {
+            console.warn('Error parsing map timing data:', error);
             return { duration: 0, noteCount: noteCount };
         }
     }
 
-    function formatDuration(milliseconds) {
-        if (milliseconds <= 0 || isNaN(milliseconds)) return "0:00";
-        const totalSeconds = Math.floor(milliseconds / 1000);
-        const mins = Math.floor(totalSeconds / 60);
-        const secs = totalSeconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    getRawUrl(url) {
+        if (url.includes('github.com')) {
+            let newUrl = url.replace('github.com', 'raw.githubusercontent.com');
+            newUrl = newUrl.replace('/blob/', '/').replace('/raw/', '/');
+            return newUrl;
+        }
+        if (url.includes('gitlab.com') && url.includes('/-/blob/')) {
+            return url.replace('/-/blob/', '/-/raw/');
+        }
+        return url;
     }
 
-    function parseTimeToMilliseconds(timeString) {
-        if (!timeString || timeString === "") return null;
-        const parts = timeString.split(':');
-        if (parts.length !== 2) return null;
-        const mins = parseInt(parts[0]) || 0;
-        const secs = parseInt(parts[1]) || 0;
-        return (mins * 60 + secs) * 1000;
-    }
-
-    async function fetchMapData(url) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+    updateSliderRanges(maps) {
+        const durations = maps.filter(m => m.duration > 0).map(m => m.duration);
+        const noteCounts = maps.filter(m => m.noteCount > 0).map(m => m.noteCount);
         
-        try {
-            const response = await fetch(url, {
-                signal: controller.signal,
-                cache: 'default' 
-            });
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+        if (durations.length > 0) {
+            const maxDuration = Math.max(...durations);
+            durationRange.max = Math.max(maxDuration, 300000);
+            currentDurationRange.max = durationRange.max;
+            if (durationMaxInput) {
+                durationMaxInput.value = formatDuration(durationRange.max);
             }
-            return await response.text();
-        } catch (error) {
-            clearTimeout(timeoutId);
-            return null;
+        }
+        
+        if (noteCounts.length > 0) {
+            const maxNotes = Math.max(...noteCounts);
+            notesRange.max = Math.max(maxNotes, 10000);
+            currentNotesRange.max = notesRange.max;
+            if (notesMaxInput) {
+                notesMaxInput.value = Math.round(notesRange.max);
+            }
+        }
+        
+        if (typeof updateDurationSlider === 'function') updateDurationSlider();
+        if (typeof updateNotesSlider === 'function') updateNotesSlider();
+    }
+
+    showLoadingProgress() {
+        let progressContainer = document.getElementById('batch-loading-progress');
+        if (!progressContainer) {
+            progressContainer = document.createElement('div');
+            progressContainer.id = 'batch-loading-progress';
+            progressContainer.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(0, 0, 0, 0.9);
+                    color: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    text-align: center;
+                    z-index: 10000;
+                    min-width: 300px;
+                ">
+                    <h3>Loading Map Data...</h3>
+                    <div style="
+                        width: 100%;
+                        height: 20px;
+                        background: #333;
+                        border-radius: 10px;
+                        overflow: hidden;
+                        margin: 10px 0;
+                    ">
+                        <div id="progress-bar" style="
+                            height: 100%;
+                            background: linear-gradient(90deg, #4facfe, #00f2fe);
+                            width: 0%;
+                            transition: width 0.3s ease;
+                        "></div>
+                    </div>
+                    <p id="progress-text">0 / 0 maps loaded</p>
+                    <p style="font-size: 0.9em; color: #ccc;">This may take a few minutes...</p>
+                </div>
+            `;
+            document.body.appendChild(progressContainer);
         }
     }
 
-    let scrollTimeout;
-    function checkScroll() {
-        if (scrollTimeout) return;
+    updateLoadingProgress() {
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
         
-        scrollTimeout = setTimeout(() => {
-            if (!infiniteScrollEnabled || isLoading) {
-                scrollTimeout = null;
-                return;
-            }
-            
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            const windowHeight = window.innerHeight;
-            const documentHeight = document.documentElement.scrollHeight;
-            
-            if (scrollTop + windowHeight >= documentHeight - 200) {
-                loadMoreMaps();
-            }
-            scrollTimeout = null;
-        }, 100);
-    }
-
-    function loadMoreMaps() {
-        if (isLoading || currentDisplayCount >= filteredMaps.length) return;
-        
-        isLoading = true;
-        loadingSpinner.style.display = 'block';
-        loadMoreBtn.disabled = true;
-        loadMoreBtn.textContent = 'Loading...';
-        
-        requestAnimationFrame(() => {
-            const previousCount = currentDisplayCount;
-            const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-            currentDisplayCount = Math.min(currentDisplayCount + batchSize, filteredMaps.length);
-            
-            const fragment = document.createDocumentFragment();
-            for (let i = previousCount; i < currentDisplayCount; i++) {
-                const m = filteredMaps[i];
-                const card = createMapCard(m);
-                fragment.appendChild(card);
-            }
-            mapList.appendChild(fragment);
-            
-            updateLoadMoreButton();
-            isLoading = false;
-            loadingSpinner.style.display = 'none';
-            loadStatsForVisibleMaps();
-        });
-    }
-
-    function updateLoadMoreButton() {
-        const remainingMaps = filteredMaps.length - currentDisplayCount;
-        
-        if (remainingMaps <= 0) {
-            loadMoreBtn.style.display = 'none';
-            scrollIndicator.textContent = `All ${filteredMaps.length} maps loaded`;
-        } else {
-            loadMoreBtn.style.display = 'block';
-            loadMoreBtn.disabled = false;
-            const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-            loadMoreBtn.textContent = `Load ${Math.min(batchSize, remainingMaps)} More Maps`;
-            scrollIndicator.textContent = `${remainingMaps} maps remaining - Scroll to auto-load`;
+        if (progressBar && progressText) {
+            const percentage = (this.loadingProgress.loaded / this.loadingProgress.total) * 100;
+            progressBar.style.width = percentage + '%';
+            progressText.textContent = `${this.loadingProgress.loaded} / ${this.loadingProgress.total} maps loaded`;
         }
     }
 
-    window.addEventListener('scroll', checkScroll, { passive: true });
+    hideLoadingProgress() {
+        const progressContainer = document.getElementById('batch-loading-progress');
+        if (progressContainer) {
+            progressContainer.remove();
+        }
+    }
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    getCacheSize() {
+        return this.mapDataCache.size;
+    }
+
+    clearCache() {
+        this.mapDataCache.clear();
+        console.log('Map data cache cleared');
+    }
+
+    getCacheStats() {
+        return {
+            size: this.mapDataCache.size,
+            memory: JSON.stringify([...this.mapDataCache.entries()]).length
+        };
+    }
+}
+
+let isLowQualityMode = false;
+const difficultyOrder = ["Easy", "Medium", "Hard", "Logic", "Brrrr", "Tasukete"];
+let sortAscending = true;
+let starSortDescending = true;
+let sortMode = 'difficulty'; 
+let maps = [];
+let filteredMaps = [];
+let selectedDifficulties = [];
+let selectedPatterns = [];
+let apmFilter = "all";
+let showNewMapsOnly = false;
+let currentDisplayCount = 50;
+const LOAD_BATCH_SIZE = 200;
+let isLoading = false;
+let infiniteScrollEnabled = true;
+let durationRange = { min: 0, max: 600000 };
+let notesRange = { min: 0, max: 10000 };
+let currentDurationRange = { min: 0, max: 600000 };
+let currentNotesRange = { min: 0, max: 10000 };
+
+const searchBar = document.getElementById('search-bar');
+const mapList = document.getElementById('map-list');
+const sortToggle = document.getElementById('sort-toggle');
+const starSortToggle = document.getElementById('star-sort-toggle');
+const filterToggle = document.getElementById('filter-toggle');
+const filterMenu = document.getElementById('filter-menu');
+const popup = document.getElementById('popup');
+const loadingSpinner = document.getElementById('loading-spinner');
+const loadMoreBtn = document.getElementById('load-more-btn');
+const loadMoreContainer = document.getElementById('load-more-container');
+const scrollIndicator = document.getElementById('scroll-indicator');
+const performanceToggle = document.getElementById('performance-toggle');
+const newMapsCheckbox = document.getElementById('new-maps-only');
+const durationMinThumb = document.getElementById('duration-min-thumb');
+const durationMaxThumb = document.getElementById('duration-max-thumb');
+const durationMinInput = document.getElementById('duration-min-input');
+const durationMaxInput = document.getElementById('duration-max-input');
+const durationTrack = document.getElementById('duration-track');
+const notesMinThumb = document.getElementById('notes-min-thumb');
+const notesMaxThumb = document.getElementById('notes-max-thumb');
+const notesMinInput = document.getElementById('notes-min-input');
+const notesMaxInput = document.getElementById('notes-max-input');
+const notesTrack = document.getElementById('notes-track');
+
+performanceToggle.addEventListener('click', () => {
+    isLowQualityMode = !isLowQualityMode;
+    document.body.classList.toggle('low-quality', isLowQualityMode);
+    performanceToggle.classList.toggle('active', isLowQualityMode);
+    performanceToggle.textContent = isLowQualityMode ? 'High Quality Mode' : 'Low Quality Mode';
     
-    loadMoreBtn.addEventListener('click', () => {
-        if (!isLoading) {
+    try {
+        localStorage.setItem('soundSpaceLowQuality', isLowQualityMode.toString());
+    } catch (e) {}
+    
+    if (maps.length > 0) {
+        renderMaps();
+    }
+    
+    if (isLowQualityMode && window.mapDataManager) {
+        window.mapDataManager.clearCache();
+    }
+});
+
+try {
+    const savedPreference = localStorage.getItem('soundSpaceLowQuality');
+    if (savedPreference === 'true') {
+        performanceToggle.click();
+    }
+} catch (e) {}
+
+function initSliders() {
+    initDurationSlider();
+    initNotesSlider();
+}
+
+function initDurationSlider() {
+    let isDragging = false;
+    let currentThumb = null;
+    
+    function updateDurationSlider() {
+        const minPercent = (currentDurationRange.min / durationRange.max) * 100;
+        const maxPercent = (currentDurationRange.max / durationRange.max) * 100;
+        
+        durationMinThumb.style.left = minPercent + '%';
+        durationMaxThumb.style.left = maxPercent + '%';
+        durationTrack.style.left = minPercent + '%';
+        durationTrack.style.width = (maxPercent - minPercent) + '%';
+        
+        durationMinInput.value = formatDuration(currentDurationRange.min);
+        durationMaxInput.value = formatDuration(currentDurationRange.max);
+    }
+    
+    function handleDurationMouseDown(e, thumb) {
+        e.preventDefault();
+        e.stopPropagation();
+        isDragging = true;
+        currentThumb = thumb;
+        thumb.classList.add('active');
+        document.addEventListener('mousemove', handleDurationMouseMove);
+        document.addEventListener('mouseup', handleDurationMouseUp);
+    }
+    
+    function handleDurationMouseMove(e) {
+        if (!isDragging || !currentThumb) return;
+        e.preventDefault();
+        
+        const slider = currentThumb.parentElement;
+        const rect = slider.getBoundingClientRect();
+        const percent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+        const value = (percent / 100) * durationRange.max;
+        
+        if (currentThumb === durationMinThumb) {
+            currentDurationRange.min = Math.max(0, Math.min(value, currentDurationRange.max - 1000));
+        } else {
+            currentDurationRange.max = Math.min(durationRange.max, Math.max(value, currentDurationRange.min + 1000));
+        }
+        
+        updateDurationSlider();
+        debounceFilterUpdate();
+    }
+    
+    function handleDurationMouseUp() {
+        if (isDragging && currentThumb) {
+            currentThumb.classList.remove('active');
+            isDragging = false;
+            currentThumb = null;
+            document.removeEventListener('mousemove', handleDurationMouseMove);
+            document.removeEventListener('mouseup', handleDurationMouseUp);
+        }
+    }
+    
+    durationMinThumb.addEventListener('mousedown', (e) => handleDurationMouseDown(e, durationMinThumb));
+    durationMaxThumb.addEventListener('mousedown', (e) => handleDurationMouseDown(e, durationMaxThumb));
+    
+    durationMinThumb.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleDurationMouseDown(e.touches[0], durationMinThumb);
+    });
+    durationMaxThumb.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleDurationMouseDown(e.touches[0], durationMaxThumb);
+    });
+    
+    document.addEventListener('touchmove', (e) => {
+        if (isDragging) {
+            handleDurationMouseMove(e.touches[0]);
+        }
+    });
+    
+    document.addEventListener('touchend', handleDurationMouseUp);
+    
+    durationMinInput.addEventListener('input', () => {
+        const ms = parseTimeToMilliseconds(durationMinInput.value);
+        if (ms !== null && ms >= 0 && ms <= durationRange.max) {
+            currentDurationRange.min = Math.min(ms, currentDurationRange.max - 1000);
+            updateDurationSlider();
+            debounceFilterUpdate();
+        }
+    });
+    
+    durationMaxInput.addEventListener('input', () => {
+        const ms = parseTimeToMilliseconds(durationMaxInput.value);
+        if (ms !== null && ms >= 0 && ms <= durationRange.max) {
+            currentDurationRange.max = Math.max(ms, currentDurationRange.min + 1000);
+            updateDurationSlider();
+            debounceFilterUpdate();
+        }
+    });
+    
+    updateDurationSlider();
+}
+
+function initNotesSlider() {
+    let isDragging = false;
+    let currentThumb = null;
+    
+    function updateNotesSlider() {
+        const minPercent = (currentNotesRange.min / notesRange.max) * 100;
+        const maxPercent = (currentNotesRange.max / notesRange.max) * 100;
+        
+        notesMinThumb.style.left = minPercent + '%';
+        notesMaxThumb.style.left = maxPercent + '%';
+        notesTrack.style.left = minPercent + '%';
+        notesTrack.style.width = (maxPercent - minPercent) + '%';
+        
+        notesMinInput.value = Math.round(currentNotesRange.min);
+        notesMaxInput.value = Math.round(currentNotesRange.max);
+    }
+    
+    function handleNotesMouseDown(e, thumb) {
+        e.preventDefault();
+        e.stopPropagation();
+        isDragging = true;
+        currentThumb = thumb;
+        thumb.classList.add('active');
+        document.addEventListener('mousemove', handleNotesMouseMove);
+        document.addEventListener('mouseup', handleNotesMouseUp);
+    }
+    
+    function handleNotesMouseMove(e) {
+        if (!isDragging || !currentThumb) return;
+        e.preventDefault();
+        
+        const slider = currentThumb.parentElement;
+        const rect = slider.getBoundingClientRect();
+        const percent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+        const value = (percent / 100) * notesRange.max;
+        
+        if (currentThumb === notesMinThumb) {
+            currentNotesRange.min = Math.max(0, Math.min(value, currentNotesRange.max - 10));
+        } else {
+            currentNotesRange.max = Math.min(notesRange.max, Math.max(value, currentNotesRange.min + 10));
+        }
+        
+        updateNotesSlider();
+        debounceFilterUpdate();
+    }
+    
+    function handleNotesMouseUp() {
+        if (isDragging && currentThumb) {
+            currentThumb.classList.remove('active');
+            isDragging = false;
+            currentThumb = null;
+            document.removeEventListener('mousemove', handleNotesMouseMove);
+            document.removeEventListener('mouseup', handleNotesMouseUp);
+        }
+    }
+    
+    notesMinThumb.addEventListener('mousedown', (e) => handleNotesMouseDown(e, notesMinThumb));
+    notesMaxThumb.addEventListener('mousedown', (e) => handleNotesMouseDown(e, notesMaxThumb));
+    
+    notesMinThumb.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleNotesMouseDown(e.touches[0], notesMinThumb);
+    });
+    notesMaxThumb.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleNotesMouseDown(e.touches[0], notesMaxThumb);
+    });
+    
+    document.addEventListener('touchmove', (e) => {
+        if (isDragging) {
+            handleNotesMouseMove(e.touches[0]);
+        }
+    });
+    
+    document.addEventListener('touchend', handleNotesMouseUp);
+    
+    notesMinInput.addEventListener('input', () => {
+        const value = parseInt(notesMinInput.value) || 0;
+        if (value >= 0 && value <= notesRange.max) {
+            currentNotesRange.min = Math.min(value, currentNotesRange.max - 10);
+            updateNotesSlider();
+            debounceFilterUpdate();
+        }
+    });
+    
+    notesMaxInput.addEventListener('input', () => {
+        const value = parseInt(notesMaxInput.value) || notesRange.max;
+        if (value >= 0 && value <= notesRange.max) {
+            currentNotesRange.max = Math.max(value, currentNotesRange.min + 10);
+            updateNotesSlider();
+            debounceFilterUpdate();
+        }
+    });
+    
+    updateNotesSlider();
+}
+
+let filterUpdateTimeout;
+function debounceFilterUpdate() {
+    clearTimeout(filterUpdateTimeout);
+    filterUpdateTimeout = setTimeout(() => {
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = batchSize;
+        filterAndRenderMaps();
+    }, 300);
+}
+
+function formatArtistName(artistName) {
+    return artistName.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function createStarRating(starRating) {
+    if (starRating === null || starRating === undefined) {
+        return '<span class="star-rating loading">Loading...</span>';
+    }
+    
+    const numRating = parseFloat(starRating);
+    if (isNaN(numRating)) {
+        return '<span class="star-rating">★ 0.00</span>';
+    }
+    
+    return `<span class="star-rating">★ ${numRating.toFixed(2)}</span>`;
+}
+
+async function loadMapDataFromJSON() {
+    try {
+        loadingSpinner.style.display = 'block';
+        const timestamp = Date.now();
+        const response = await fetch(`Mapdata.json?v=${timestamp}`, {
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load map data: ${response.status} ${response.statusText}`);
+        }
+        
+        const mapData = await response.json();
+        
+        if (!Array.isArray(mapData)) {
+            throw new Error('Invalid JSON format: Expected an array of maps');
+        }
+
+        maps = mapData.map(mapArray => {
+            if (!Array.isArray(mapArray) || mapArray.length < 7) {
+                return null;
+            }
+            
+            const [link, mapName, artist, mapper, difficulty, patterns, isNew, starRating] = mapArray;
+            
+            return {
+                link: link,
+                mapName: mapName,
+                artist: artist,
+                mapper: mapper,
+                difficulty: difficulty,
+                patterns: patterns,
+                isNew: isNew || false,
+                starRating: starRating ? parseFloat(starRating) : null,
+                duration: undefined,
+                noteCount: undefined,
+                statsLoaded: false
+            };
+        }).filter(map => map !== null);
+        
+        if (maps.length === 0) {
+            throw new Error('No valid map data found');
+        }
+
+        const dataManager = new MapDataManager();
+        
+        await dataManager.loadAllMapData(maps);
+        
+        initSliders();
+        filterAndRenderMaps();
+        
+        window.mapDataManager = dataManager;
+        
+    } catch (error) {
+        loadingSpinner.style.display = 'none';
+        mapList.innerHTML = `
+            <div class="error-message">
+                <h3>Failed to Load Map Data</h3>
+                <p>Error: ${error.message}</p>
+                <p>Please ensure that:</p>
+                <ul style="text-align: left; display: inline-block;">
+                    <li>The file "Mapdata.json" exists in the same directory</li>
+                    <li>The JSON file contains valid map data in the correct format</li>
+                    <li>Your web server allows loading local JSON files</li>
+                </ul>
+                <p>If running locally, you may need to serve this through a web server rather than opening the HTML file directly.</p>
+                <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #4facfe; color: white; border: none; border-radius: 5px; cursor: pointer;">Retry</button>
+            </div>
+        `;
+    }
+}
+
+function parseMapData(rawData) {
+    if (!rawData || typeof rawData !== 'string') {
+        return { duration: 0, noteCount: 0 };
+    }
+    
+    const firstCommaIndex = rawData.indexOf(',');
+    if (firstCommaIndex === -1) {
+        return { duration: 0, noteCount: 0 };
+    }
+    
+    const notesData = rawData.substring(firstCommaIndex + 1);
+    const noteArray = notesData.split(',');
+    const noteCount = noteArray.length;
+    
+    if (noteCount === 0) {
+        return { duration: 0, noteCount: 0 };
+    }
+    
+    try {
+        const firstNote = noteArray[0];
+        const firstNoteParts = firstNote.split('|');
+        const startTime = parseFloat(firstNoteParts[2]) || 0;
+        
+        const lastNote = noteArray[noteArray.length - 1];
+        const lastNoteParts = lastNote.split('|');
+        const endTime = parseFloat(lastNoteParts[2]) || 0;
+        
+        const durationMilliseconds = endTime - startTime;
+        return { duration: Math.max(0, durationMilliseconds), noteCount: noteCount };
+    } catch (error) {
+        return { duration: 0, noteCount: noteCount };
+    }
+}
+
+function formatDuration(milliseconds) {
+    if (milliseconds <= 0 || isNaN(milliseconds)) return "0:00";
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function parseTimeToMilliseconds(timeString) {
+    if (!timeString || timeString === "") return null;
+    const parts = timeString.split(':');
+    if (parts.length !== 2) return null;
+    const mins = parseInt(parts[0]) || 0;
+    const secs = parseInt(parts[1]) || 0;
+    return (mins * 60 + secs) * 1000;
+}
+
+async function fetchMapData(url) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    try {
+        const response = await fetch(url, {
+            signal: controller.signal,
+            cache: 'default' 
+        });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.text();
+    } catch (error) {
+        clearTimeout(timeoutId);
+        return null;
+    }
+}
+
+let scrollTimeout;
+function checkScroll() {
+    if (scrollTimeout) return;
+    
+    scrollTimeout = setTimeout(() => {
+        if (!infiniteScrollEnabled || isLoading) {
+            scrollTimeout = null;
+            return;
+        }
+        
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        
+        if (scrollTop + windowHeight >= documentHeight - 200) {
             loadMoreMaps();
         }
-    });
+        scrollTimeout = null;
+    }, 100);
+}
 
-    let searchTimeout;
-    searchBar.addEventListener('input', () => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
-            currentDisplayCount = batchSize;
-            filterAndRenderMaps();
-        }, 300);
+function loadMoreMaps() {
+    if (isLoading || currentDisplayCount >= filteredMaps.length) return;
+    
+    isLoading = true;
+    loadingSpinner.style.display = 'block';
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.textContent = 'Loading...';
+    
+    requestAnimationFrame(() => {
+        const previousCount = currentDisplayCount;
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = Math.min(currentDisplayCount + batchSize, filteredMaps.length);
+        
+        const fragment = document.createDocumentFragment();
+        for (let i = previousCount; i < currentDisplayCount; i++) {
+            const m = filteredMaps[i];
+            const card = createMapCard(m);
+            fragment.appendChild(card);
+        }
+        mapList.appendChild(fragment);
+        
+        updateLoadMoreButton();
+        isLoading = false;
+        loadingSpinner.style.display = 'none';
     });
+}
 
-    filterToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        filterMenu.classList.toggle('show');
-    });
+function updateLoadMoreButton() {
+    const remainingMaps = filteredMaps.length - currentDisplayCount;
+    
+    if (remainingMaps <= 0) {
+        loadMoreBtn.style.display = 'none';
+        scrollIndicator.textContent = `All ${filteredMaps.length} maps loaded`;
+    } else {
+        loadMoreBtn.style.display = 'block';
+        loadMoreBtn.disabled = false;
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        loadMoreBtn.textContent = `Load ${Math.min(batchSize, remainingMaps)} More Maps`;
+        scrollIndicator.textContent = `${remainingMaps} maps remaining - Scroll to auto-load`;
+    }
+}
 
-    document.addEventListener('click', (e) => {
+window.addEventListener('scroll', checkScroll, { passive: true });
+
+loadMoreBtn.addEventListener('click', () => {
+    if (!isLoading) {
+        loadMoreMaps();
+    }
+});
+
+let searchTimeout;
+searchBar.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        const batchSize = isLowQualityMode ? LOAD_BATCH_SIZE * 2 : LOAD_BATCH_SIZE;
+        currentDisplayCount = batchSize;
+        filterAndRenderMaps();
+    }, 300);
+});
+
+filterToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    filterMenu.classList.toggle('show');
+});
+
+document.addEventListener('click', (e) => {
+    if (!filterToggle.contains(e.target) && !filterMenu.contains(e.target)) {
+        filterMenu.classList.remove('show');
+    }
+});
+document.addEventListener('touchstart', (e) => {
         if (!filterToggle.contains(e.target) && !filterMenu.contains(e.target)) {
             filterMenu.classList.remove('show');
         }
