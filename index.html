@@ -414,7 +414,7 @@ h1 {
 }
 
 .dual-range-slider {
-    position: center;
+    position: relative;
     width: 80%;
     height: 6px;
     background: #333;
@@ -1434,7 +1434,7 @@ h1 {
 class MapDataManager {
     constructor() {
         this.mapDataCache = new Map();
-        this.batchSize = 175;
+        this.batchSize = 350;
         this.retryAttempts = 3;
         this.retryDelay = 1000;
         this.loadingProgress = { loaded: 0, total: 0 };
@@ -1660,7 +1660,7 @@ class MapDataManager {
                         "></div>
                     </div>
                     <p id="progress-text">0 / 0 maps loaded</p>
-                    <p style="font-size: 0.9em; color: #ccc;">This may take a few minutes...</p>
+                    <p style="font-size: 0.9em; color: #ccc;">This may take a few seconds...</p>
                 </div>
             `;
             document.body.appendChild(progressContainer);
