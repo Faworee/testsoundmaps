@@ -414,8 +414,8 @@ h1 {
 }
 
 .dual-range-slider {
-    position: relative;
-    width: 100%;
+    position: Center;
+    width: 80%;
     height: 6px;
     background: #333;
     border-radius: 3px;
@@ -1435,7 +1435,7 @@ h1 {
     const difficultyOrder = ["Easy", "Medium", "Hard", "Logic", "Brrrr", "Tasukete"];
     let sortAscending = true;
     let starSortDescending = true;
-    let sortMode = 'difficulty'; // 'difficulty' or 'star'
+    let sortMode = 'difficulty'; 
     let maps = [];
     let filteredMaps = [];
     let selectedDifficulties = [];
@@ -1443,14 +1443,14 @@ h1 {
     let apmFilter = "all";
     let showNewMapsOnly = false;
     let currentDisplayCount = 50;
-    const LOAD_BATCH_SIZE = 50;
+    const LOAD_BATCH_SIZE = 200;
     let isLoading = false;
     let infiniteScrollEnabled = true;
     
     // Slider variables
-    let durationRange = { min: 0, max: 300000 }; // 0 to 5 minutes in ms
+    let durationRange = { min: 0, max: 600000 };
     let notesRange = { min: 0, max: 10000 };
-    let currentDurationRange = { min: 0, max: 300000 };
+    let currentDurationRange = { min: 0, max: 600000 };
     let currentNotesRange = { min: 0, max: 10000 };
     
     const mapDataCache = new Map();
@@ -1809,33 +1809,57 @@ h1 {
         }
     }
 
-    async function loadStatsForVisibleMaps() {
-        if (isLowQualityMode) return;
-        
-        const visibleMaps = filteredMaps.slice(0, currentDisplayCount).filter(map => !map.statsLoaded);
-        
-        for (const map of visibleMaps) {
-            const rawLink = getRawUrl(map.link);
-            
-            try {
-                let rawData = mapDataCache.get(rawLink);
-                if (!rawData) {
-                    rawData = await fetchMapData(rawLink);
-                    if (rawData) {
-                        mapDataCache.set(rawLink, rawData);
-                    }
-                }
-                
+   async function loadStatsForAllMaps() {
+    if (isLowQualityMode) return;
+    
+    const mapsToLoad = maps.filter(map => !map.statsLoaded);
+
+    for (const map of mapsToLoad) {
+        const rawLink = getRawUrl(map.link);
+
+        try {
+            let rawData = mapDataCache.get(rawLink);
+            if (!rawData) {
+                rawData = await fetchMapData(rawLink);
                 if (rawData) {
-                    const stats = parseMapData(rawData);
-                    map.duration = stats.duration;
-                    map.noteCount = stats.noteCount;
-                    map.statsLoaded = true;
-                    updateMapCard(map);
+                    mapDataCache.set(rawLink, rawData);
                 }
-            } catch (error) {}
-        }
+            }
+
+            if (rawData) {
+                const stats = parseMapData(rawData);
+                map.duration = stats.duration;
+                map.noteCount = stats.noteCount;
+                map.statsLoaded = true;
+                updateMapCard(map);
+            }
+        } catch (error) {}
     }
+}
+
+    
+    for (const map of mapsToLoad) {
+        const rawLink = getRawUrl(map.link);
+        
+        try {
+            let rawData = mapDataCache.get(rawLink);
+            if (!rawData) {
+                rawData = await fetchMapData(rawLink);
+                if (rawData) {
+                    mapDataCache.set(rawLink, rawData);
+                }
+            }
+            
+            if (rawData) {
+                const stats = parseMapData(rawData);
+                map.duration = stats.duration;
+                map.noteCount = stats.noteCount;
+                map.statsLoaded = true;
+                updateMapCard(map);
+            }
+        } catch (error) {}
+    }
+}
 
     function updateMapCard(map) {
         const cards = document.querySelectorAll('.map-card');
